@@ -1,0 +1,100 @@
+/* Styles for the Admin route */
+.admin-panel {
+  display: grid;
+  grid-template-areas:
+    "header header"
+    "form list";
+  grid-template-columns: 1fr 2fr;
+  gap: 20px;
+  padding: 20px;
+  background: rgba(0, 0, 0, 0.8);
+  border-radius: 10px;
+  color: #f4f4f4;
+  box-shadow: 0 4px 6px rgba(0, 0, 0, 0.3);
+}
+
+.admin-panel > h2 {
+  grid-area: header;
+  text-align: center;
+}
+
+.admin-panel > div:first-of-type {
+  grid-area: form;
+  display: flex;
+  flex-direction: column;
+  gap: 15px;
+}
+
+.admin-panel ul {
+  grid-area: list;
+  list-style: none;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 15px;
+}
+
+.admin-panel input {
+  margin: 5px;
+  padding: 10px;
+  border: 2px solid #f4d03f;
+  border-radius: 5px;
+}
+
+.admin-panel button {
+  padding: 10px 20px;
+  background: #f4d03f;
+  border: none;
+  border-radius: 5px;
+  color: #0a1a2a;
+  font-weight: bold;
+  cursor: pointer;
+  transition: background 0.2s;
+}
+
+.admin-panel button:hover {
+  background: #d4b03f;
+}
+
+.admin-panel textarea {
+  margin: 5px;
+  padding: 6px;
+  border: 2px solid #f4d03f;
+  border-radius: 5px;
+  width: calc(100% - 40px);
+  max-width: 250px;
+  background: white;
+  color: #0a1a2a;
+  font-family: 'Arial', sans-serif;
+  resize: none;
+}
+
+.admin-panel textarea:focus {
+  outline: none;
+  border-color: #ffd700;
+  box-shadow: 0 0 5px #ffd700;
+}
+
+.image-upload {
+  margin: 10px 0;
+  padding: 5px;
+  border: 2px dashed #ccc;
+  border-radius: 5px;
+  background-color: #f9f9f9;
+  cursor: pointer;
+}
+
+.image-upload:hover {
+  border-color: #aaa;
+}
+
+.game-item {
+  display: grid;
+  grid-template-columns: 1fr 2fr;
+  gap: 10px;
+  padding: 15px;
+  border: 1px solid #f4d03f;
+  border-radius: 10px;
+  background: rgba(255, 255, 255, 0.1);
+  box-shadow: 0 4px 6px rgba(0, 0, 0, 0.2);
+}

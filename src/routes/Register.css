@@ -1,0 +1,73 @@
+.register-container {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  height: 100vh;
+  background: url('/assets/pirate-background.jpg') no-repeat center center/cover;
+  color: #f4f4f4;
+  font-family: 'Pirata One', cursive;
+  text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.7);
+}
+
+.register-container h2 {
+  font-size: 3rem;
+  margin-bottom: 1.5rem;
+  text-shadow: 3px 3px 6px rgba(0, 0, 0, 0.8);
+}
+
+.register-container .form-group {
+  margin-bottom: 1.5rem;
+  width: 100%;
+  max-width: 350px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+}
+
+.register-container .form-group label {
+  display: block;
+  margin-bottom: 0.5rem;
+  font-weight: bold;
+  color: #ffd700;
+}
+
+.register-container .form-group input {
+  width: 100%;
+  padding: 0.75rem;
+  border: 2px solid #ffd700;
+  border-radius: 8px;
+  background-color: rgba(0, 0, 0, 0.6);
+  color: #f4f4f4;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.5);
+}
+
+.register-container .form-group input:focus {
+  outline: none;
+  box-shadow: 0 0 8px rgba(255, 215, 0, 0.8);
+}
+
+.register-container button {
+  padding: 0.75rem 1.5rem;
+  background-color: #8b0000;
+  color: #ffd700;
+  border: 2px solid #ffd700;
+  border-radius: 8px;
+  font-size: 1.5rem;
+  font-weight: bold;
+  cursor: pointer;
+  transition: background-color 0.3s, transform 0.2s;
+  text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.7);
+  margin-top: 10px;
+  width: 100%;
+  max-width: 350px;
+}
+
+.register-container button:hover {
+  background-color: #a52a2a;
+  transform: scale(1.05);
+}
+
+.register-container button:active {
+  transform: scale(0.95);
+}

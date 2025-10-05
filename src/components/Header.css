@@ -1,0 +1,18 @@
+/* Styles for the Header component */
+.app-header {
+  padding: 20px;
+  background: linear-gradient(90deg, #1a2a3a, #0a1a2a);
+  color: #f4d03f;
+  border-bottom: 2px solid #f4d03f;
+}
+
+.app-header nav a {
+  color: #f4d03f;
+  text-decoration: none;
+  margin: 0 10px;
+  font-weight: bold;
+}
+
+.app-header nav a:hover {
+  text-decoration: underline;
+}

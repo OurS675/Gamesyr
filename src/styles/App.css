@@ -1,0 +1,95 @@
+body {
+  margin: 0;
+  font-family: 'Treasure Map Deadhand', sans-serif;
+  background-color: #0a1a2a;
+  color: #f4f4f4;
+}
+
+.app {
+  text-align: center;
+}
+
+.pirate-theme {
+  background-image: url('/public/assets/pirate-background.jpg');
+  background-size: cover;
+  background-position: center;
+}
+
+footer {
+  padding: 10px;
+  background: #0a1a2a;
+  color: #f4d03f;
+  border-top: 2px solid #f4d03f;
+}
+
+/* Header Styles */
+.app-header {
+  padding: 20px;
+  background: linear-gradient(90deg, #1a2a3a, #0a1a2a);
+  color: #f4d03f;
+  border-bottom: 2px solid #f4d03f;
+}
+
+.app-header nav a {
+  color: #f4d03f;
+  text-decoration: none;
+  margin: 0 10px;
+  font-weight: bold;
+}
+
+.app-header nav a:hover {
+  text-decoration: underline;
+}
+
+/* Game Card Styles */
+.game-card {
+  background: rgba(0, 0, 0, 0.7);
+  border: 2px solid #f4d03f;
+  border-radius: 10px;
+  padding: 15px;
+  color: #f4f4f4;
+  width: 200px;
+  text-align: center;
+  box-shadow: 0 4px 6px rgba(0, 0, 0, 0.3);
+  transition: transform 0.2s;
+}
+
+.game-card:hover {
+  transform: scale(1.05);
+}
+
+.game-card a {
+  color: #f4d03f;
+  text-decoration: none;
+}
+
+/* Admin Panel Styles */
+.admin-panel {
+  padding: 20px;
+  background: rgba(0, 0, 0, 0.8);
+  border-radius: 10px;
+  color: #f4f4f4;
+  box-shadow: 0 4px 6px rgba(0, 0, 0, 0.3);
+}
+
+.admin-panel input {
+  margin: 5px;
+  padding: 10px;
+  border: 2px solid #f4d03f;
+  border-radius: 5px;
+}
+
+.admin-panel button {
+  padding: 10px 20px;
+  background: #f4d03f;
+  border: none;
+  border-radius: 5px;
+  color: #0a1a2a;
+  font-weight: bold;
+  cursor: pointer;
+  transition: background 0.2s;
+}
+
+.admin-panel button:hover {
+  background: #d4b03f;
+}
