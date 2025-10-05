@@ -2,6 +2,8 @@ import React, { useState } from 'react';
 import './Admin.css';
 import { useAuth } from '../auth/AuthContext';
 
+const genres = ["Action", "Adventure", "RPG", "Shooter", "Puzzle", "Sports", "Strategy"];
+
 function Admin({ games, setGames }) {
   const { user, logout } = useAuth();
   const [newGame, setNewGame] = useState({
@@ -10,13 +12,22 @@ function Admin({ games, setGames }) {
     image: '',
     images: [],
     description: '',
-    notes: ''
+    notes: '',
+    genre: ''
   });
+  const [filterGenre, setFilterGenre] = useState("");
+  const [searchQuery, setSearchQuery] = useState("");
+
+  const filteredGames = games.filter(
+    (game) =>
+      (filterGenre === "" || game.genre === filterGenre) &&
+      game.name.toLowerCase().includes(searchQuery.toLowerCase())
+  );
 
   const handleAddGame = () => {
     if (newGame.name && newGame.links[0].url) {
       setGames([...games, { ...newGame, id: games.length + 1 }]);
-      setNewGame({ name: '', links: [{ name: '', url: '' }], image: '', images: [], description: '', notes: '' });
+      setNewGame({ name: '', links: [{ name: '', url: '' }], image: '', images: [], description: '', notes: '', genre: '' });
     } else {
       alert('Por favor, completa al menos el nombre y el enlace del juego.');
     }
@@ -51,6 +62,24 @@ function Admin({ games, setGames }) {
     const files = Array.from(event.target.files);
     const imageUrls = files.map((file) => URL.createObjectURL(file));
     setNewGame({ ...newGame, images: [...(newGame.images || []), ...imageUrls] });
+  };
+
+  const handleEditImage = (id, newImage) => {
+    setGames(games.map(game => (
+      game.id === id ? { ...game, image: newImage } : game
+    )));
+  };
+
+  const handleAddImage = (id, newImage) => {
+    setGames(games.map(game => (
+      game.id === id ? { ...game, images: [...game.images, newImage] } : game
+    )));
+  };
+
+  const handleRemoveImage = (id, imageIndex) => {
+    setGames(games.map(game => (
+      game.id === id ? { ...game, images: game.images.filter((_, index) => index !== imageIndex) } : game
+    )));
   };
 
   if (!user) {
@@ -113,10 +142,36 @@ function Admin({ games, setGames }) {
           ))}
           <button type="button" onClick={handleAddLink}>Agregar Enlace</button>
         </div>
+        <select
+          value={newGame.genre || ""}
+          onChange={(e) => setNewGame({ ...newGame, genre: e.target.value })}
+        >
+          <option value="" disabled>Select Genre</option>
+          {genres.map((genre) => (
+            <option key={genre} value={genre}>{genre}</option>
+          ))}
+        </select>
         <button onClick={handleAddGame}>Add Game</button>
       </div>
+      <div className="filters">
+        <select
+          value={filterGenre}
+          onChange={(e) => setFilterGenre(e.target.value)}
+        >
+          <option value="">All Genres</option>
+          {genres.map((genre) => (
+            <option key={genre} value={genre}>{genre}</option>
+          ))}
+        </select>
+        <input
+          type="text"
+          placeholder="Search games"
+          value={searchQuery}
+          onChange={(e) => setSearchQuery(e.target.value)}
+        />
+      </div>
       <ul>
-        {games.map(game => (
+        {filteredGames.map((game) => (
           <li key={game.id} className="game-item">
             <input
               type="text"
@@ -136,6 +191,17 @@ function Admin({ games, setGames }) {
               onChange={(e) => handleEditGame(game.id, 'image', e.target.value)}
               placeholder="URL de la imagen"
             />
+            <input
+              type="file"
+              accept="image/*"
+              onChange={(e) => {
+                const file = e.target.files[0];
+                if (file) {
+                  const imageUrl = URL.createObjectURL(file);
+                  handleEditImage(game.id, imageUrl);
+                }
+              }}
+            />
             <textarea
               value={game.description}
               onChange={(e) => handleEditGame(game.id, 'description', e.target.value)}
@@ -148,6 +214,37 @@ function Admin({ games, setGames }) {
               placeholder="Notas"
               rows="2"
             />
+            <select
+              value={game.genre || ""}
+              onChange={(e) => handleEditGame(game.id, 'genre', e.target.value)}
+            >
+              <option value="" disabled>Select Genre</option>
+              {genres.map((genre) => (
+                <option key={genre} value={genre}>{genre}</option>
+              ))}
+            </select>
+            <div className="image-management">
+              <h4>Manage Images</h4>
+              <div className="image-list">
+                {(game.images || []).map((img, index) => (
+                  <div key={index} className="image-item">
+                    <img src={img} alt={`Game Image ${index + 1}`} />
+                    <button onClick={() => handleRemoveImage(game.id, index)}>Remove</button>
+                  </div>
+                ))}
+              </div>
+              <input
+                type="file"
+                accept="image/*"
+                onChange={(e) => {
+                  const file = e.target.files[0];
+                  if (file) {
+                    const imageUrl = URL.createObjectURL(file);
+                    handleAddImage(game.id, imageUrl);
+                  }
+                }}
+              />
+            </div>
           </li>
         ))}
       </ul>

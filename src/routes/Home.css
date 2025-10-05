@@ -27,3 +27,38 @@
 .login-button:hover {
   background-color: #0056b3;
 }
+
+/* Updated search and filter styles to match page design */
+.filters {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  gap: 15px;
+  margin: 20px auto;
+  padding: 10px;
+  background-color: #0a1a2a;
+  border-radius: 10px;
+  box-shadow: 0 4px 6px rgba(0, 0, 0, 0.2);
+  max-width: 800px;
+}
+
+.filters select,
+.filters input {
+  padding: 5px;
+  border: 3px solid #0b2947;
+  border-radius: 5px;
+  font-size: 1rem;
+  color: #fff;
+  background-color: #0a1a2a;
+}
+
+.filters select:focus,
+.filters input:focus {
+  outline: none;
+  border-color: #0b2947;
+  box-shadow: 0 0 5px #003f7f;
+}
+
+.filters input {
+  flex: 1;
+}
