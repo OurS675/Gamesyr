@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { BrowserRouter as Router, Route, Routes, Navigate } from 'react-router-dom';
 import { AuthProvider, useAuth } from './auth/AuthContext';
 import Header from './components/Header';
@@ -7,14 +7,22 @@ import Admin from './routes/Admin';
 import GameDetail from './routes/GameDetail';
 import Login from './routes/Login';
 import Register from './routes/Register';
+import { AdminRoute, UserRoute } from './routes/ProtectedRoutes';
 import './App.css';
+import { supabase } from './supabaseClient';
 
 function App() {
-  const [games, setGames] = useState([
-    { id: 1, name: 'Sea of Thieves', links: ['https://www.seaofthieves.com'], image: '/assets/sea-of-thieves.jpg' },
-    { id: 2, name: 'Pirates of the Caribbean', links: ['https://pirates.disney.com'], image: '/assets/pirates-of-the-caribbean.jpg' },
-    { id: 3, name: 'Assassin\'s Creed IV: Black Flag', links: ['https://www.ubisoft.com'], image: '/assets/black-flag.jpg' },
-  ]);
+  const [games, setGames] = useState([]);
+
+  useEffect(() => {
+    const fetchGames = async () => {
+      const { data, error } = await supabase.from('games').select('*').order('id');
+      if (!error) {
+        setGames(data || []);
+      }
+    };
+    fetchGames();
+  }, []);
 
   return (
     <Router>
@@ -37,16 +45,6 @@ function App() {
       </AuthProvider>
     </Router>
   );
-}
-
-function AdminRoute({ children }) {
-  const { user, isAdmin } = useAuth();
-
-  if (!user || !isAdmin) {
-    return <Navigate to="/login" replace />;
-  }
-
-  return children;
 }
 
 export default App;

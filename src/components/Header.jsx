@@ -1,15 +1,29 @@
 import React from 'react';
 import { Link } from 'react-router-dom';
+import { useAuth } from '../auth/AuthContext';
 import './Header.css';
 
 function Header() {
+  const { user, logout } = useAuth();
+
+  const handleLogout = async () => {
+    await logout();
+  };
+
   return (
     <header className="app-header">
       <h1>⚓ Pirate Games Finder 🏴‍☠️</h1>
       <p>Embark on a journey to discover your favorite games!</p>
       <nav>
-        <Link to="/">⚓ Home</Link> | <Link to="/admin">Admin Panel</Link> | <Link to="/login">Login ⚓</Link>
-      
+        <Link to="/">⚓ Home</Link>
+        {user ? (
+          <div className="user-info">
+            <span>👤 {user.username}</span>
+            <button onClick={handleLogout} className="logout-btn">Cerrar sesión</button>
+          </div>
+        ) : (
+          <Link to="/login">Login ⚓</Link>
+        )}
       </nav>
     </header>
   );

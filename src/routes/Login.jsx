@@ -2,21 +2,28 @@ import React, { useState } from 'react';
 import { useAuth } from '../auth/AuthContext';
 import { useNavigate } from 'react-router-dom';
 import './Login.css';
+import Swal from 'sweetalert2';
 
 function Login() {
-  const [username, setUsername] = useState('');
+  const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [error, setError] = useState('');
   const { login } = useAuth();
   const navigate = useNavigate();
 
-  const handleSubmit = (e) => {
+  const handleSubmit = async (e) => {
     e.preventDefault();
-    if (username === 'admin' && password === 'password') {
-      login(username, password);
-      navigate('/admin');
-    } else {
-      setError('Credenciales inválidas.');
+    setError(''); // Limpiar errores anteriores
+    console.log('Iniciando proceso de login...');
+    try {
+      await login(email, password);
+      console.log('Login exitoso');
+      Swal.fire({ icon: 'success', title: 'Sesión iniciada', timer: 1500, showConfirmButton: false });
+    } catch (err) {
+      console.error('Error en login:', err);
+      const msg = err?.message || 'Error al iniciar sesión';
+      setError(msg);
+      Swal.fire({ icon: 'error', title: 'Error', text: msg });
     }
   };
 
@@ -25,12 +32,12 @@ function Login() {
       <h2>Iniciar Sesión</h2>
       <form onSubmit={handleSubmit}>
         <div className="form-group">
-          <label htmlFor="username">Usuario:</label>
+          <label htmlFor="email">Email:</label>
           <input
-            type="text"
-            id="username"
-            value={username}
-            onChange={(e) => setUsername(e.target.value)}
+            type="email"
+            id="email"
+            value={email}
+            onChange={(e) => setEmail(e.target.value)}
             required
           />
         </div>

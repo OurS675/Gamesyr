@@ -1,6 +1,7 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import './Admin.css';
 import { useAuth } from '../auth/AuthContext';
+import { supabase } from '../supabaseClient';
 
 const genres = ["Action", "Adventure", "RPG", "Shooter", "Puzzle", "Sports", "Strategy"];
 
@@ -24,19 +25,39 @@ function Admin({ games, setGames }) {
       game.name.toLowerCase().includes(searchQuery.toLowerCase())
   );
 
-  const handleAddGame = () => {
-    if (newGame.name && newGame.links[0].url) {
-      setGames([...games, { ...newGame, id: games.length + 1 }]);
-      setNewGame({ name: '', links: [{ name: '', url: '' }], image: '', images: [], description: '', notes: '', genre: '' });
-    } else {
-      alert('Por favor, completa al menos el nombre y el enlace del juego.');
+  const handleAddGame = async () => {
+    if (!newGame.name) {
+      alert('Por favor, completa al menos el nombre del juego.');
+      return;
     }
+    const payload = {
+      name: newGame.name,
+      links: newGame.links,
+      image: newGame.image,
+      images: newGame.images,
+      description: newGame.description,
+      notes: newGame.notes,
+      genre: newGame.genre
+    };
+    const { data, error } = await supabase.from('games').insert([payload]).select('*');
+    if (error) {
+      alert('Error al crear juego: ' + error.message);
+      return;
+    }
+    setGames([...(games || []), data[0]]);
+    setNewGame({ name: '', links: [{ name: '', url: '' }], image: '', images: [], description: '', notes: '', genre: '' });
   };
 
-  const handleEditGame = (id, field, value) => {
-    setGames(games.map(game => (
+  const handleEditGame = async (id, field, value) => {
+    const updated = games.map(game => (
       game.id === id ? { ...game, [field]: field === 'links' ? [value] : value } : game
-    )));
+    ));
+    setGames(updated);
+    const toUpdate = updated.find(g => g.id === id);
+    const { error } = await supabase.from('games').update({ [field]: toUpdate[field] }).eq('id', id);
+    if (error) {
+      alert('Error al actualizar: ' + error.message);
+    }
   };
 
   const handleAddLink = () => {
@@ -70,16 +91,61 @@ function Admin({ games, setGames }) {
     )));
   };
 
-  const handleAddImage = (id, newImage) => {
-    setGames(games.map(game => (
-      game.id === id ? { ...game, images: [...game.images, newImage] } : game
-    )));
+  const handleAddImage = async (id, newImage) => {
+    const updated = games.map(game => (
+      game.id === id ? { ...game, images: [...(game.images || []), newImage] } : game
+    ));
+    setGames(updated);
+    const current = updated.find(g => g.id === id);
+    await supabase.from('games').update({ images: current.images }).eq('id', id);
   };
 
-  const handleRemoveImage = (id, imageIndex) => {
-    setGames(games.map(game => (
-      game.id === id ? { ...game, images: game.images.filter((_, index) => index !== imageIndex) } : game
-    )));
+  const handleRemoveImage = async (id, imageIndex) => {
+    const updated = games.map(game => (
+      game.id === id ? { ...game, images: (game.images || []).filter((_, index) => index !== imageIndex) } : game
+    ));
+    setGames(updated);
+    const current = updated.find(g => g.id === id);
+    await supabase.from('games').update({ images: current.images }).eq('id', id);
+  };
+
+  const handleImageUploadToSupabase = async (event, gameId) => {
+    const file = event.target.files[0];
+    if (!file) return;
+
+    const fileName = `${gameId}/${file.name}`;
+    const { data, error } = await supabase.storage
+      .from('images')
+      .upload(fileName, file);
+
+    if (error) {
+      console.error('Error uploading image:', error);
+    } else {
+      const imageUrl = `${supabase.storage.from('images').getPublicUrl(fileName).data.publicUrl}`;
+      handleAddImage(gameId, imageUrl);
+    }
+  };
+
+  useEffect(() => {
+    const fetchGames = async () => {
+      const { data, error } = await supabase.from('games').select('*').order('id');
+      if (error) {
+        console.error('Error fetching games:', error);
+      } else {
+        setGames(data);
+      }
+    };
+
+    fetchGames();
+  }, [setGames]);
+
+  const handleDeleteGame = async (id) => {
+    const { error } = await supabase.from('games').delete().eq('id', id);
+    if (error) {
+      alert('Error al borrar: ' + error.message);
+      return;
+    }
+    setGames((games || []).filter(g => g.id !== id));
   };
 
   if (!user) {
@@ -194,13 +260,7 @@ function Admin({ games, setGames }) {
             <input
               type="file"
               accept="image/*"
-              onChange={(e) => {
-                const file = e.target.files[0];
-                if (file) {
-                  const imageUrl = URL.createObjectURL(file);
-                  handleEditImage(game.id, imageUrl);
-                }
-              }}
+              onChange={(e) => handleImageUploadToSupabase(e, game.id)}
             />
             <textarea
               value={game.description}
@@ -244,6 +304,7 @@ function Admin({ games, setGames }) {
                   }
                 }}
               />
+              <button type="button" onClick={() => handleDeleteGame(game.id)}>Delete</button>
             </div>
           </li>
         ))}
