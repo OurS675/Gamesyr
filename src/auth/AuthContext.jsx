@@ -1,4 +1,4 @@
-import React, { createContext, useContext, useEffect, useState } from 'react';
+import React, { createContext, useContext, useEffect, useState, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { supabase } from '../supabaseClient';
 
@@ -7,7 +7,13 @@ const AuthContext = createContext();
 export function AuthProvider({ children }) {
   const [user, setUser] = useState(null);
   const [isLoading, setIsLoading] = useState(true);
+  const userRef = useRef(null);
   const navigate = useNavigate();
+
+  // keep a ref with the latest user so the auth listener can check current state
+  useEffect(() => {
+    userRef.current = user;
+  }, [user]);
 
   // Ajustar la consulta para obtener el perfil del usuario y manejar errores correctamente
   const getProfileByAuthId = async (authUserId) => {
@@ -22,7 +28,7 @@ export function AuthProvider({ children }) {
       console.log('Usando petición en curso para auth_user_id:', authUserId);
       return await inflight.get(authUserId);
     }
-    // Añadir un timeout para evitar que la app se quede esperando indefinidamente
+    // Do a quick fetch with a short timeout and don't throw on failure.
     const queryPromise = (async () => {
       try {
         const { data: profileData, error: profileError } = await supabase
@@ -32,42 +38,61 @@ export function AuthProvider({ children }) {
           .maybeSingle();
 
         if (profileError) {
-          console.error('Error al obtener el perfil (desde Supabase):', profileError);
-          throw profileError;
-        }
-
-        if (!profileData) {
-          console.warn('No se encontró un perfil para el usuario con auth_user_id:', authUserId);
+          console.warn('Error al obtener el perfil (desde Supabase):', profileError);
           return null;
         }
 
-        console.log('Perfil encontrado:', profileData);
+        if (!profileData) {
+          // No profile yet
+          return null;
+        }
+
         return profileData;
       } catch (error) {
-        console.error('Error interno en queryPromise getProfileByAuthId:', error);
-        throw error;
+        // Avoid noisy errors; return null and let background retry handle it.
+        return null;
       }
     })();
 
-    // Guardar la promesa en inflight para que otras llamadas esperen el mismo resultado
-    // y asegurarnos de limpiar la entrada cuando termine.
     const wrapped = queryPromise.finally(() => {
       try { inflight.delete(authUserId); } catch (e) { /* noop */ }
     });
     inflight.set(authUserId, wrapped);
 
-    const timeoutMs = 15000; // 15 segundos
-    const timeoutPromise = new Promise((_, reject) =>
-      setTimeout(() => reject(new Error(`Timeout al obtener perfil para auth_user_id=${authUserId} después de ${timeoutMs}ms`)), timeoutMs)
-    );
+    // Short timeout: 3s to keep UI responsive.
+    const timeoutMs = 3000;
+    const timeoutPromise = new Promise((resolve) => setTimeout(() => resolve(null), timeoutMs));
 
     try {
       const result = await Promise.race([wrapped, timeoutPromise]);
-      return result;
+      return result; // may be profile object or null
     } catch (error) {
-      console.error('Error completo en getProfileByAuthId:', error);
-      throw new Error(error.message || 'Error al obtener el perfil del usuario.');
+      // never throw; return null as fallback
+      return null;
     }
+  };
+
+  // Background poll: tries to fetch profile every n seconds until found (or until max attempts)
+  const backgroundFetchProfile = (authUserId, attempts = 5, intervalMs = 2000) => {
+    let tries = 0;
+    const id = setInterval(async () => {
+      tries += 1;
+      try {
+        const { data: profileData, error } = await supabase
+          .from('users')
+          .select('*')
+          .eq('auth_user_id', authUserId)
+          .maybeSingle();
+        if (!error && profileData) {
+          console.log('Background profile fetch succeeded:', profileData);
+          setUser({ id: profileData.id, username: profileData.username, email: profileData.email, role: profileData.role, created_at: profileData.created_at, updated_at: profileData.updated_at });
+          clearInterval(id);
+        }
+      } catch (e) {
+        // ignore and retry
+      }
+      if (tries >= attempts) clearInterval(id);
+    }, intervalMs);
   };
 
   // Limpieza de inflight cuando una petición finaliza (para no almacenar promesas resueltas)
@@ -209,38 +234,42 @@ export function AuthProvider({ children }) {
         if (session?.user?.id) {
           console.log('Sesión encontrada, cargando perfil...');
           try {
-            let profile = await getProfileByAuthId(session.user.id);
-            if (!profile) {
-              console.log('Perfil no encontrado, creando uno nuevo...');
+              let profile = await getProfileByAuthId(session.user.id);
+              if (!profile) {
+                console.log('Perfil no encontrado en fetch rápido, lanzando background fetch...');
+                // Start background fetch to populate profile when it becomes available
+                backgroundFetchProfile(session.user.id);
+                // proceed without blocking UI
               // Crear perfil automáticamente si no existe
-              const fallbackUsername = (session.user.email || '').split('@')[0] || 'user';
+                const fallbackUsername = (session.user.email || '').split('@')[0] || 'user';
               
-              const { data: insertData, error: insertError } = await supabase
-                .from('users')
-                .insert([{ 
-                  auth_user_id: session.user.id, 
-                  email: session.user.email, 
-                  username: fallbackUsername, 
-                  role: 'user' 
-                }])
-                .select();
+                const { data: insertData, error: insertError } = await supabase
+                  .from('users')
+                  .insert([{ 
+                    auth_user_id: session.user.id, 
+                    email: session.user.email, 
+                    username: fallbackUsername, 
+                    role: 'user' 
+                  }])
+                  .select();
                 
-              if (insertError) {
-                console.error('Error al crear perfil:', insertError);
-                // Usar perfil temporal
-                profile = { 
-                  id: session.user.id, 
-                  username: fallbackUsername, 
-                  email: session.user.email, 
-                  role: 'user', 
-                  created_at: new Date().toISOString(), 
-                  updated_at: new Date().toISOString() 
-                };
-              } else if (insertData && insertData.length > 0) {
-                profile = insertData[0];
-              } else {
-                profile = await getProfileByAuthId(session.user.id);
-              }
+                if (insertError) {
+                  console.warn('Error al crear perfil (no crítico):', insertError);
+                  // Usar perfil temporal ligero para permitir mostrar la app
+                  profile = { 
+                    id: session.user.id, 
+                    username: fallbackUsername, 
+                    email: session.user.email, 
+                    role: 'user', 
+                    created_at: new Date().toISOString(), 
+                    updated_at: new Date().toISOString() 
+                  };
+                } else if (insertData && insertData.length > 0) {
+                  profile = insertData[0];
+                } else {
+                  // try again quickly
+                  profile = await getProfileByAuthId(session.user.id);
+                }
             }
             
             if (profile) {
@@ -272,10 +301,22 @@ export function AuthProvider({ children }) {
       // Procesar sólo los eventos relevantes para evitar bucles o reacciones a eventos internos
       if (event === 'SIGNED_IN' && session?.user?.id) {
         try {
-          console.log('Sesión activa, cargando perfil de usuario...', session.user.id);
+          const uid = session.user.id;
+          console.log('Sesión activa, auth listener recibido para:', uid);
 
+          // Si ya tenemos el usuario cargado en el contexto (ej. login() ya lo estableció),
+          // evitar recargar el perfil para no provocar duplicados o parpadeos.
+          if (userRef.current && userRef.current.id === uid && userRef.current.role) {
+            console.log('Perfil ya cargado en contexto, evitando recarga para auth_user_id:', uid);
+            // Navegar según el rol ya disponible
+            if (userRef.current.role === 'admin') navigate('/admin');
+            else navigate('/');
+            return;
+          }
+
+          console.log('Cargando perfil de usuario desde DB...', uid);
           // Obtener el perfil del usuario
-          let profile = await getProfileByAuthId(session.user.id);
+          let profile = await getProfileByAuthId(uid);
           console.log('Perfil obtenido:', profile);
 
           // Asegurarse de establecer el usuario en el contexto para que
