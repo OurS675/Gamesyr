@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import './Admin.css';
 import { useAuth } from '../auth/AuthContext';
 import { supabase } from '../supabaseClient';
+import { uploadFile, getPublicUrl } from '../utils/storage';
 
 const genres = ["Action", "Adventure", "RPG", "Shooter", "Puzzle", "Sports", "Strategy"];
 
@@ -92,37 +93,95 @@ function Admin({ games, setGames }) {
   };
 
   const handleAddImage = async (id, newImage) => {
-    const updated = games.map(game => (
-      game.id === id ? { ...game, images: [...(game.images || []), newImage] } : game
-    ));
-    setGames(updated);
-    const current = updated.find(g => g.id === id);
-    await supabase.from('games').update({ images: current.images }).eq('id', id);
+    try {
+      // Actualizar el estado local inmediatamente
+      const updated = games.map(game => (
+        game.id === id ? { ...game, images: [...(game.images || []), newImage] } : game
+      ));
+      setGames(updated);
+      
+      // Actualizar en la base de datos
+      const current = updated.find(g => g.id === id);
+      const { error } = await supabase.from('games').update({ images: current.images }).eq('id', id);
+      
+      if (error) {
+        console.error('Error al actualizar imágenes en la base de datos:', error);
+        alert('Error al guardar la imagen en la base de datos');
+        // Revertir el cambio local si hay error
+        setGames(games);
+        return;
+      }
+      
+      console.log('Imagen agregada exitosamente al juego:', id);
+    } catch (error) {
+      console.error('Error en handleAddImage:', error);
+      alert('Error inesperado al agregar la imagen');
+    }
   };
 
   const handleRemoveImage = async (id, imageIndex) => {
-    const updated = games.map(game => (
-      game.id === id ? { ...game, images: (game.images || []).filter((_, index) => index !== imageIndex) } : game
-    ));
-    setGames(updated);
-    const current = updated.find(g => g.id === id);
-    await supabase.from('games').update({ images: current.images }).eq('id', id);
+    try {
+      // Obtener la imagen que se va a eliminar para logging
+      const gameToUpdate = games.find(g => g.id === id);
+      const imageToRemove = gameToUpdate?.images?.[imageIndex];
+      
+      // Actualizar el estado local inmediatamente
+      const updated = games.map(game => (
+        game.id === id ? { ...game, images: (game.images || []).filter((_, index) => index !== imageIndex) } : game
+      ));
+      setGames(updated);
+      
+      // Actualizar en la base de datos
+      const current = updated.find(g => g.id === id);
+      const { error } = await supabase.from('games').update({ images: current.images }).eq('id', id);
+      
+      if (error) {
+        console.error('Error al eliminar imagen de la base de datos:', error);
+        alert('Error al eliminar la imagen de la base de datos');
+        // Revertir el cambio local si hay error
+        setGames(games);
+        return;
+      }
+      
+      console.log('Imagen eliminada exitosamente del juego:', id, 'Imagen:', imageToRemove);
+    } catch (error) {
+      console.error('Error en handleRemoveImage:', error);
+      alert('Error inesperado al eliminar la imagen');
+    }
   };
 
   const handleImageUploadToSupabase = async (event, gameId) => {
     const file = event.target.files[0];
     if (!file) return;
 
-    const fileName = `${gameId}/${file.name}`;
-    const { data, error } = await supabase.storage
-      .from('images')
-      .upload(fileName, file);
+    try {
+      // Crear un nombre único para evitar conflictos
+      const timestamp = Date.now();
+      const fileName = `${gameId}/${timestamp}_${file.name}`;
+      
+      console.log('Subiendo imagen:', fileName);
+      const { data, error, path } = await uploadFile(fileName, file);
 
-    if (error) {
-      console.error('Error uploading image:', error);
-    } else {
-      const imageUrl = `${supabase.storage.from('images').getPublicUrl(fileName).data.publicUrl}`;
-      handleAddImage(gameId, imageUrl);
+      if (error) {
+        console.error('Error uploading image:', error);
+        // Mostrar mensaje claro al usuario
+        alert('Error al subir la imagen: ' + (error.message || JSON.stringify(error)));
+        return;
+      }
+
+      // Usar la ruta sanitizada que devuelve el helper (path)
+      const imageUrl = getPublicUrl(path || fileName);
+      console.log('Imagen subida exitosamente:', imageUrl);
+      
+      // Actualizar inmediatamente en el estado local y en la base de datos
+      await handleAddImage(gameId, imageUrl);
+      
+      // Limpiar el input file
+      event.target.value = '';
+      
+    } catch (error) {
+      console.error('Error en handleImageUploadToSupabase:', error);
+      alert('Error inesperado al subir la imagen');
     }
   };
 
@@ -137,6 +196,47 @@ function Admin({ games, setGames }) {
     };
 
     fetchGames();
+
+    // Configurar suscripción en tiempo real para cambios en la tabla games
+    const subscription = supabase
+      .channel('games-changes')
+      .on('postgres_changes', 
+        { 
+          event: '*', 
+          schema: 'public', 
+          table: 'games' 
+        }, 
+        (payload) => {
+          console.log('Cambio detectado en la tabla games:', payload);
+          
+          switch (payload.eventType) {
+            case 'INSERT':
+              setGames(prevGames => [...prevGames, payload.new]);
+              break;
+            case 'UPDATE':
+              setGames(prevGames => 
+                prevGames.map(game => 
+                  game.id === payload.new.id ? payload.new : game
+                )
+              );
+              break;
+            case 'DELETE':
+              setGames(prevGames => 
+                prevGames.filter(game => game.id !== payload.old.id)
+              );
+              break;
+            default:
+              // Para cualquier otro evento, refrescar toda la lista
+              fetchGames();
+          }
+        }
+      )
+      .subscribe();
+
+    // Cleanup: cancelar suscripción cuando el componente se desmonte
+    return () => {
+      subscription.unsubscribe();
+    };
   }, [setGames]);
 
   const handleDeleteGame = async (id) => {
@@ -284,27 +384,35 @@ function Admin({ games, setGames }) {
               ))}
             </select>
             <div className="image-management">
-              <h4>Manage Images</h4>
+              <h4>Gestión de Imágenes ({(game.images || []).length} imágenes)</h4>
               <div className="image-list">
                 {(game.images || []).map((img, index) => (
                   <div key={index} className="image-item">
-                    <img src={img} alt={`Game Image ${index + 1}`} />
-                    <button onClick={() => handleRemoveImage(game.id, index)}>Remove</button>
+                    <img src={img} alt={`Game Image ${index + 1}`} style={{width: '100px', height: '100px', objectFit: 'cover'}} />
+                    <button 
+                      onClick={() => handleRemoveImage(game.id, index)}
+                      className="remove-image-btn"
+                      title="Eliminar imagen"
+                    >
+                      ❌ Eliminar
+                    </button>
                   </div>
                 ))}
               </div>
-              <input
-                type="file"
-                accept="image/*"
-                onChange={(e) => {
-                  const file = e.target.files[0];
-                  if (file) {
-                    const imageUrl = URL.createObjectURL(file);
-                    handleAddImage(game.id, imageUrl);
-                  }
-                }}
-              />
-              <button type="button" onClick={() => handleDeleteGame(game.id)}>Delete</button>
+              <div className="image-upload-section">
+                <label htmlFor={`file-upload-${game.id}`} className="file-upload-label">
+                  📁 Subir nueva imagen
+                </label>
+                <input
+                  id={`file-upload-${game.id}`}
+                  type="file"
+                  accept="image/*"
+                  onChange={(e) => handleImageUploadToSupabase(e, game.id)}
+                  style={{display: 'none'}}
+                />
+                <small>Formatos soportados: JPG, PNG, GIF</small>
+              </div>
+              <button type="button" onClick={() => handleDeleteGame(game.id)} className="delete-game-btn">🗑️ Eliminar Juego</button>
             </div>
           </li>
         ))}

@@ -75,3 +75,4 @@ on conflict (auth_user_id) do update set role = 'admin';
 select 'Configuración completada' as status;
 select count(*) as total_users from public.users;
 select count(*) as total_games from public.games;
+

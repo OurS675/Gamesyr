@@ -19,6 +19,9 @@ function Header() {
         {user ? (
           <div className="user-info">
             <span>👤 {user.username}</span>
+            {user.role === 'admin' && (
+              <Link to="/admin" className="admin-btn">Admin Panel</Link>
+            )}
             <button onClick={handleLogout} className="logout-btn">Cerrar sesión</button>
           </div>
         ) : (
