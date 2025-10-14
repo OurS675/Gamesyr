@@ -61,6 +61,74 @@ function Admin({ games, setGames }) {
     }
   };
 
+  // --- Link management for existing games ---
+  const handleAddLinkToGame = async (id) => {
+    try {
+      const prev = games.slice();
+      const updated = games.map(game => (
+        game.id === id ? { ...game, links: [...(game.links || []), { name: '', url: '' }] } : game
+      ));
+      setGames(updated);
+
+      const current = updated.find(g => g.id === id);
+      const { error } = await supabase.from('games').update({ links: current.links }).eq('id', id);
+      if (error) {
+        console.error('Error adding link to DB:', error);
+        alert('Error al agregar el enlace: ' + error.message);
+        setGames(prev);
+      }
+    } catch (error) {
+      console.error('Error en handleAddLinkToGame:', error);
+      alert('Error inesperado al agregar enlace');
+    }
+  };
+
+  const handleEditLinkForGame = async (gameId, index, field, value) => {
+    try {
+      const prev = games.slice();
+      const updated = games.map(game => {
+        if (game.id !== gameId) return game;
+        const links = (game.links || []).map((ln, i) => i === index ? { ...ln, [field]: value } : ln);
+        return { ...game, links };
+      });
+      setGames(updated);
+
+      const current = updated.find(g => g.id === gameId);
+      const { error } = await supabase.from('games').update({ links: current.links }).eq('id', gameId);
+      if (error) {
+        console.error('Error updating link in DB:', error);
+        alert('Error al actualizar el enlace: ' + error.message);
+        setGames(prev);
+      }
+    } catch (error) {
+      console.error('Error en handleEditLinkForGame:', error);
+      alert('Error inesperado al editar enlace');
+    }
+  };
+
+  const handleRemoveLinkFromGame = async (gameId, index) => {
+    try {
+      const prev = games.slice();
+      const updated = games.map(game => {
+        if (game.id !== gameId) return game;
+        const links = (game.links || []).filter((_, i) => i !== index);
+        return { ...game, links };
+      });
+      setGames(updated);
+
+      const current = updated.find(g => g.id === gameId);
+      const { error } = await supabase.from('games').update({ links: current.links }).eq('id', gameId);
+      if (error) {
+        console.error('Error removing link from DB:', error);
+        alert('Error al eliminar el enlace: ' + error.message);
+        setGames(prev);
+      }
+    } catch (error) {
+      console.error('Error en handleRemoveLinkFromGame:', error);
+      alert('Error inesperado al eliminar enlace');
+    }
+  };
+
   const handleAddLink = () => {
     setNewGame({
       ...newGame,
@@ -264,12 +332,6 @@ function Admin({ games, setGames }) {
           onChange={(e) => setNewGame({ ...newGame, name: e.target.value })}
         />
         <input
-          type="text"
-          placeholder="Image URL"
-          value={newGame.image}
-          onChange={(e) => setNewGame({ ...newGame, image: e.target.value })}
-        />
-        <input
           type="file"
           multiple
           accept="image/*"
@@ -351,17 +413,28 @@ function Admin({ games, setGames }) {
               onChange={(e) => handleEditGame(game.id, 'links', e.target.value)}
               placeholder="Enlace del juego"
             />
-            <input
-              type="text"
-              value={game.image}
-              onChange={(e) => handleEditGame(game.id, 'image', e.target.value)}
-              placeholder="URL de la imagen"
-            />
-            <input
-              type="file"
-              accept="image/*"
-              onChange={(e) => handleImageUploadToSupabase(e, game.id)}
-            />
+            <div className="links-section">
+              <h5>Enlaces</h5>
+              {(game.links || []).map((link, idx) => (
+                <div key={idx} className="link-row">
+                  <input
+                    type="text"
+                    value={link.name || ''}
+                    placeholder="Nombre del enlace"
+                    onChange={(e) => handleEditLinkForGame(game.id, idx, 'name', e.target.value)}
+                  />
+                  <input
+                    type="text"
+                    value={link.url || ''}
+                    placeholder="URL del enlace"
+                    onChange={(e) => handleEditLinkForGame(game.id, idx, 'url', e.target.value)}
+                  />
+                  <button type="button" onClick={() => handleRemoveLinkFromGame(game.id, idx)}>Eliminar</button>
+                </div>
+              ))}
+              <button type="button" onClick={() => handleAddLinkToGame(game.id)}>Agregar enlace</button>
+            </div>
+            
             <textarea
               value={game.description}
               onChange={(e) => handleEditGame(game.id, 'description', e.target.value)}

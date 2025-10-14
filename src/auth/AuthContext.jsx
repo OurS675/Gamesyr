@@ -6,6 +6,7 @@ const AuthContext = createContext();
 
 export function AuthProvider({ children }) {
   const [user, setUser] = useState(null);
+  const [isLoading, setIsLoading] = useState(true);
   const navigate = useNavigate();
 
   // Ajustar la consulta para obtener el perfil del usuario y manejar errores correctamente
@@ -277,6 +278,19 @@ export function AuthProvider({ children }) {
           let profile = await getProfileByAuthId(session.user.id);
           console.log('Perfil obtenido:', profile);
 
+          // Asegurarse de establecer el usuario en el contexto para que
+          // componentes como Header puedan leer user.role inmediatamente.
+          if (profile) {
+            setUser({
+              id: profile.id,
+              username: profile.username,
+              email: profile.email,
+              role: profile.role,
+              created_at: profile.created_at,
+              updated_at: profile.updated_at,
+            });
+          }
+
           if (profile?.role === 'admin') {
             console.log('Usuario admin detectado, navegando al panel de administración (SPA)');
             navigate('/admin');
@@ -313,12 +327,20 @@ export function AuthProvider({ children }) {
     };
   }, []);
 
+  // Ensure isLoading is cleared after initial auth check (avoid stuck state)
+  useEffect(() => {
+    // When user is set (or we've determined there is no session), stop loading
+    if (user !== undefined) {
+      setIsLoading(false);
+    }
+  }, [user]);
+
   // Role-based access helpers
   const isAdmin = user?.role === 'admin';
   const isUser = user?.role === 'user';
 
   return (
-    <AuthContext.Provider value={{ user, login, logout, isAdmin, isUser, register }}>
+    <AuthContext.Provider value={{ user, login, logout, isAdmin, isUser, register, isLoading }}>
       {children}
     </AuthContext.Provider>
   );

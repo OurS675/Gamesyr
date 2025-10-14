@@ -4,7 +4,7 @@ import { useAuth } from '../auth/AuthContext';
 import './Header.css';
 
 function Header() {
-  const { user, logout } = useAuth();
+  const { user, logout, isLoading } = useAuth();
 
   const handleLogout = async () => {
     await logout();
@@ -16,7 +16,9 @@ function Header() {
       <p>Embark on a journey to discover your favorite games!</p>
       <nav>
         <Link to="/">⚓ Home</Link>
-        {user ? (
+        {isLoading ? (
+          <div className="user-info">Cargando...</div>
+        ) : user ? (
           <div className="user-info">
             <span>👤 {user.username}</span>
             {user.role === 'admin' && (
