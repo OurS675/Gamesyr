@@ -1,4 +1,5 @@
 import { supabase } from '../supabaseClient';
+import logger from './logger';
 
 // Nombre del bucket que usaremos en el proyecto (public)
 // Actualizado para usar el bucket proporcionado por el usuario: 'avatars'
@@ -42,7 +43,7 @@ export function getPublicUrl(path) {
     const res = supabase.storage.from(BUCKET).getPublicUrl(path);
     return res?.data?.publicUrl || null;
   } catch (error) {
-    console.error('getPublicUrl error', error);
+    logger.error('getPublicUrl error', error);
     return null;
   }
 }

@@ -1,5 +1,6 @@
 import React, { createContext, useContext, useEffect, useState, useRef } from 'react';
-import { useNavigate } from 'react-router-dom';
+import logger from '../utils/logger';
+import { useNavigate, useLocation } from 'react-router-dom';
 import { supabase } from '../supabaseClient';
 
 const AuthContext = createContext();
@@ -9,6 +10,7 @@ export function AuthProvider({ children }) {
   const [isLoading, setIsLoading] = useState(true);
   const userRef = useRef(null);
   const navigate = useNavigate();
+  const location = useLocation();
 
   // keep a ref with the latest user so the auth listener can check current state
   useEffect(() => {
@@ -17,7 +19,7 @@ export function AuthProvider({ children }) {
 
   // Ajustar la consulta para obtener el perfil del usuario y manejar errores correctamente
   const getProfileByAuthId = async (authUserId) => {
-    console.log('Buscando perfil para auth_user_id:', authUserId);
+  logger.debug('Buscando perfil para auth_user_id:', authUserId);
     // Evitar consultas duplicadas concurrentes: usar un mapa de inflight requests
     if (!getProfileByAuthId._inflight) {
       getProfileByAuthId._inflight = new Map();
@@ -25,7 +27,7 @@ export function AuthProvider({ children }) {
     const inflight = getProfileByAuthId._inflight;
 
     if (inflight.has(authUserId)) {
-      console.log('Usando petición en curso para auth_user_id:', authUserId);
+  logger.debug('Usando petición en curso para auth_user_id:', authUserId);
       return await inflight.get(authUserId);
     }
     // Do a quick fetch with a short timeout and don't throw on failure.
@@ -38,7 +40,7 @@ export function AuthProvider({ children }) {
           .maybeSingle();
 
         if (profileError) {
-          console.warn('Error al obtener el perfil (desde Supabase):', profileError);
+          logger.warn('Error al obtener el perfil (desde Supabase):', profileError);
           return null;
         }
 
@@ -84,7 +86,7 @@ export function AuthProvider({ children }) {
           .eq('auth_user_id', authUserId)
           .maybeSingle();
         if (!error && profileData) {
-          console.log('Background profile fetch succeeded:', profileData);
+          logger.debug('Background profile fetch succeeded:', profileData);
           setUser({ id: profileData.id, username: profileData.username, email: profileData.email, role: profileData.role, created_at: profileData.created_at, updated_at: profileData.updated_at });
           clearInterval(id);
         }
@@ -110,16 +112,16 @@ export function AuthProvider({ children }) {
 
   // Login simplificado y manejo de errores claro (sin timeout manual)
   const login = async (email, password) => {
-    console.log('Intentando login con:', email);
+  logger.debug('Intentando login con:', email);
     try {
-      console.log('Llamando a signInWithPassword...');
+  logger.debug('Llamando a signInWithPassword...');
 
       // Llamada directa y manejo explícito de respuesta
       const { data, error } = await supabase.auth.signInWithPassword({ email, password });
-      console.log('Respuesta de signInWithPassword:', { data, error });
+  logger.debug('Respuesta de signInWithPassword:', { data, error });
 
       if (error) {
-        console.error('Error de autenticación:', error);
+  logger.error('Error de autenticación:', error);
 
         // Detectar mensajes comunes de cuenta no verificada y proporcionar mensaje amigable
         const msg = (error.message || '').toLowerCase();
@@ -132,28 +134,28 @@ export function AuthProvider({ children }) {
 
       const session = data?.session;
       if (!session) {
-        console.error('No hay sesión después del login');
+  logger.error('No hay sesión después del login');
         throw new Error('No hay sesión activa.');
       }
 
-      console.log('Sesión obtenida:', session.user.id);
+  logger.debug('Sesión obtenida:', session.user.id);
 
       // Obtener el perfil del usuario por auth_user_id
       let profile = await getProfileByAuthId(session.user.id);
-      console.log('Perfil inicial:', profile);
+  logger.debug('Perfil inicial:', profile);
 
       if (!profile) {
-        console.log('Perfil no encontrado, creando...');
+  logger.debug('Perfil no encontrado, creando...');
         // Crear perfil si falta
         const fallbackUsername = (email || '').split('@')[0] || 'user';
-        console.log('Insertando perfil con:', { auth_user_id: session.user.id, email, username: fallbackUsername, role: 'user' });
+  logger.debug('Insertando perfil con:', { auth_user_id: session.user.id, email, username: fallbackUsername, role: 'user' });
 
         const { error: insertError } = await supabase
           .from('users')
           .insert([{ auth_user_id: session.user.id, email, username: fallbackUsername, role: 'user' }]);
 
         if (insertError) {
-          console.error('Error creando perfil:', insertError);
+          logger.error('Error creando perfil:', insertError);
           profile = { 
             id: session.user.id, 
             username: fallbackUsername, 
@@ -162,19 +164,19 @@ export function AuthProvider({ children }) {
             created_at: new Date(), 
             updated_at: new Date() 
           };
-          console.log('Usando perfil temporal:', profile);
+          logger.warn('Usando perfil temporal:', profile);
         } else {
           profile = await getProfileByAuthId(session.user.id);
-          console.log('Perfil creado exitosamente:', profile);
+          logger.debug('Perfil creado exitosamente:', profile);
         }
       }
 
-      console.log('Perfil final:', profile);
+  logger.debug('Perfil final:', profile);
       setUser({ id: profile.id, username: profile.username, email: profile.email, role: profile.role, created_at: profile.created_at, updated_at: profile.updated_at });
-      console.log('Usuario establecido, navegando...');
+  logger.debug('Usuario establecido, navegando...');
       navigate('/', { state: { loggedIn: true } }); // Redirigir al home después del login
     } catch (error) {
-      console.error('Error completo en login:', error);
+  logger.error('Error completo en login:', error);
       throw error;
     }
   };
@@ -195,7 +197,7 @@ export function AuthProvider({ children }) {
    * @param {string} email - The email of the new user.
    */
   const register = async (username, password, email) => {
-    console.log('Intentando registrar usuario:', username);
+  logger.debug('Intentando registrar usuario:', username);
     try {
       const { data, error } = await supabase.auth.signUp({ email, password });
       if (error) throw new Error(error.message);
@@ -207,14 +209,14 @@ export function AuthProvider({ children }) {
           .insert([{ auth_user_id: authUserId, username, email, role: 'user' }]);
 
         if (insertError) {
-          console.error('Error al insertar usuario en la base de datos:', insertError);
+          logger.error('Error al insertar usuario en la base de datos:', insertError);
           throw new Error('Error al registrar el usuario en la base de datos.');
         }
       }
 
-      console.log('Usuario registrado exitosamente:', username);
+  logger.debug('Usuario registrado exitosamente:', username);
     } catch (error) {
-      console.error('Error completo en registro:', error);
+      logger.error('Error completo en registro:', error);
       throw error;
     }
   };
@@ -222,21 +224,21 @@ export function AuthProvider({ children }) {
   useEffect(() => {
     const init = async () => {
       try {
-        console.log('Inicializando sesión...');
+  logger.debug('Inicializando sesión...');
         const { data, error } = await supabase.auth.getSession();
         
         if (error) {
-          console.error('Error al obtener la sesión:', error);
+          logger.error('Error al obtener la sesión:', error);
           return;
         }
         
         const session = data.session;
         if (session?.user?.id) {
-          console.log('Sesión encontrada, cargando perfil...');
+          logger.debug('Sesión encontrada, cargando perfil...');
           try {
               let profile = await getProfileByAuthId(session.user.id);
               if (!profile) {
-                console.log('Perfil no encontrado en fetch rápido, lanzando background fetch...');
+                logger.debug('Perfil no encontrado en fetch rápido, lanzando background fetch...');
                 // Start background fetch to populate profile when it becomes available
                 backgroundFetchProfile(session.user.id);
                 // proceed without blocking UI
@@ -254,7 +256,7 @@ export function AuthProvider({ children }) {
                   .select();
                 
                 if (insertError) {
-                  console.warn('Error al crear perfil (no crítico):', insertError);
+                  logger.warn('Error al crear perfil (no crítico):', insertError);
                   // Usar perfil temporal ligero para permitir mostrar la app
                   profile = { 
                     id: session.user.id, 
@@ -273,7 +275,7 @@ export function AuthProvider({ children }) {
             }
             
             if (profile) {
-              console.log('Perfil cargado correctamente');
+              logger.debug('Perfil cargado correctamente');
               setUser({ 
                 id: profile.id, 
                 username: profile.username, 
@@ -284,40 +286,40 @@ export function AuthProvider({ children }) {
               });
             }
           } catch (e) {
-            console.error('Error al inicializar usuario:', e);
+            logger.error('Error al inicializar usuario:', e);
           }
         } else {
-          console.log('No hay sesión activa');
+          logger.debug('No hay sesión activa');
         }
       } catch (e) {
-        console.error('Error general al inicializar:', e);
+        logger.error('Error general al inicializar:', e);
       }
     };
     init();
 
     const { data: sub } = supabase.auth.onAuthStateChange(async (event, session) => {
-      console.log('Auth state changed:', event, session?.user?.id);
+  logger.debug('Auth state changed:', event, session?.user?.id);
 
       // Procesar sólo los eventos relevantes para evitar bucles o reacciones a eventos internos
       if (event === 'SIGNED_IN' && session?.user?.id) {
         try {
           const uid = session.user.id;
-          console.log('Sesión activa, auth listener recibido para:', uid);
+          logger.debug('Sesión activa, auth listener recibido para:', uid);
 
           // Si ya tenemos el usuario cargado en el contexto (ej. login() ya lo estableció),
           // evitar recargar el perfil para no provocar duplicados o parpadeos.
+          // No navegamos desde el listener: dejamos que las funciones de login/register
+          // controlen la navegación explícita. Esto evita redirecciones inesperadas.
           if (userRef.current && userRef.current.id === uid && userRef.current.role) {
-            console.log('Perfil ya cargado en contexto, evitando recarga para auth_user_id:', uid);
-            // Navegar según el rol ya disponible
-            if (userRef.current.role === 'admin') navigate('/admin');
-            else navigate('/');
+            logger.debug('Perfil ya cargado en contexto, evitando recarga para auth_user_id:', uid);
+            logger.debug('Manteniendo la ruta actual (no navegamos desde el auth listener):', location.pathname);
             return;
           }
 
-          console.log('Cargando perfil de usuario desde DB...', uid);
+          logger.debug('Cargando perfil de usuario desde DB...', uid);
           // Obtener el perfil del usuario
           let profile = await getProfileByAuthId(uid);
-          console.log('Perfil obtenido:', profile);
+          logger.debug('Perfil obtenido:', profile);
 
           // Asegurarse de establecer el usuario en el contexto para que
           // componentes como Header puedan leer user.role inmediatamente.
@@ -332,24 +334,20 @@ export function AuthProvider({ children }) {
             });
           }
 
-          if (profile?.role === 'admin') {
-            console.log('Usuario admin detectado, navegando al panel de administración (SPA)');
-            navigate('/admin');
-          } else {
-            console.log('Usuario no admin, navegando a la página principal (SPA)');
-            navigate('/');
-          }
+          // No automatic navigation from auth listener. Only set the user and let
+          // explicit actions (login(), register(), or UI buttons) navigate.
+          logger.debug('Auth listener: usuario autenticado, no se realiza navegación automática. Ruta actual:', location.pathname);
         } catch (error) {
           // No limpiar el `user` por errores transitorios al obtener el perfil.
           // Solo registramos el error para diagnóstico.
-          console.error('Error cargando perfil (transitorio):', error);
+          logger.error('Error cargando perfil (transitorio):', error);
         }
       } else if (event === 'SIGNED_OUT') {
-        console.log('Evento SIGNED_OUT recibido, limpiando usuario');
+  logger.debug('Evento SIGNED_OUT recibido, limpiando usuario');
         setUser(null);
       } else {
         // Ignorar otros eventos (TOKEN_REFRESHED, USER_UPDATED, etc.)
-        console.log('Evento auth ignorado:', event);
+  logger.debug('Evento auth ignorado:', event);
       }
     });
 
@@ -363,7 +361,7 @@ export function AuthProvider({ children }) {
           sub.unsubscribe();
         }
       } catch (e) {
-        console.warn('Error al desuscribir auth listener:', e);
+        logger.warn('Error al desuscribir auth listener:', e);
       }
     };
   }, []);

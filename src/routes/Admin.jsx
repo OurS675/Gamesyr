@@ -3,6 +3,7 @@ import './Admin.css';
 import { useAuth } from '../auth/AuthContext';
 import { supabase } from '../supabaseClient';
 import { uploadFile, getPublicUrl } from '../utils/storage';
+import logger from '../utils/logger';
 
 const genres = ["Action", "Adventure", "RPG", "Shooter", "Puzzle", "Sports", "Strategy"];
 
@@ -73,12 +74,12 @@ function Admin({ games, setGames }) {
       const current = updated.find(g => g.id === id);
       const { error } = await supabase.from('games').update({ links: current.links }).eq('id', id);
       if (error) {
-        console.error('Error adding link to DB:', error);
+        logger.error('Error adding link to DB:', error);
         alert('Error al agregar el enlace: ' + error.message);
         setGames(prev);
       }
     } catch (error) {
-      console.error('Error en handleAddLinkToGame:', error);
+      logger.error('Error en handleAddLinkToGame:', error);
       alert('Error inesperado al agregar enlace');
     }
   };
@@ -96,12 +97,12 @@ function Admin({ games, setGames }) {
       const current = updated.find(g => g.id === gameId);
       const { error } = await supabase.from('games').update({ links: current.links }).eq('id', gameId);
       if (error) {
-        console.error('Error updating link in DB:', error);
+        logger.error('Error updating link in DB:', error);
         alert('Error al actualizar el enlace: ' + error.message);
         setGames(prev);
       }
     } catch (error) {
-      console.error('Error en handleEditLinkForGame:', error);
+      logger.error('Error en handleEditLinkForGame:', error);
       alert('Error inesperado al editar enlace');
     }
   };
@@ -119,12 +120,12 @@ function Admin({ games, setGames }) {
       const current = updated.find(g => g.id === gameId);
       const { error } = await supabase.from('games').update({ links: current.links }).eq('id', gameId);
       if (error) {
-        console.error('Error removing link from DB:', error);
+        logger.error('Error removing link from DB:', error);
         alert('Error al eliminar el enlace: ' + error.message);
         setGames(prev);
       }
     } catch (error) {
-      console.error('Error en handleRemoveLinkFromGame:', error);
+      logger.error('Error en handleRemoveLinkFromGame:', error);
       alert('Error inesperado al eliminar enlace');
     }
   };
@@ -173,16 +174,16 @@ function Admin({ games, setGames }) {
       const { error } = await supabase.from('games').update({ images: current.images }).eq('id', id);
       
       if (error) {
-        console.error('Error al actualizar imágenes en la base de datos:', error);
+        logger.error('Error al actualizar imágenes en la base de datos:', error);
         alert('Error al guardar la imagen en la base de datos');
         // Revertir el cambio local si hay error
         setGames(games);
         return;
       }
       
-      console.log('Imagen agregada exitosamente al juego:', id);
+  logger.debug('Imagen agregada exitosamente al juego:', id);
     } catch (error) {
-      console.error('Error en handleAddImage:', error);
+      logger.error('Error en handleAddImage:', error);
       alert('Error inesperado al agregar la imagen');
     }
   };
@@ -204,16 +205,16 @@ function Admin({ games, setGames }) {
       const { error } = await supabase.from('games').update({ images: current.images }).eq('id', id);
       
       if (error) {
-        console.error('Error al eliminar imagen de la base de datos:', error);
+        logger.error('Error al eliminar imagen de la base de datos:', error);
         alert('Error al eliminar la imagen de la base de datos');
         // Revertir el cambio local si hay error
         setGames(games);
         return;
       }
       
-      console.log('Imagen eliminada exitosamente del juego:', id, 'Imagen:', imageToRemove);
+  logger.debug('Imagen eliminada exitosamente del juego:', id, 'Imagen:', imageToRemove);
     } catch (error) {
-      console.error('Error en handleRemoveImage:', error);
+      logger.error('Error en handleRemoveImage:', error);
       alert('Error inesperado al eliminar la imagen');
     }
   };
@@ -227,11 +228,11 @@ function Admin({ games, setGames }) {
       const timestamp = Date.now();
       const fileName = `${gameId}/${timestamp}_${file.name}`;
       
-      console.log('Subiendo imagen:', fileName);
+  logger.debug('Subiendo imagen:', fileName);
       const { data, error, path } = await uploadFile(fileName, file);
 
       if (error) {
-        console.error('Error uploading image:', error);
+        logger.error('Error uploading image:', error);
         // Mostrar mensaje claro al usuario
         alert('Error al subir la imagen: ' + (error.message || JSON.stringify(error)));
         return;
@@ -239,7 +240,7 @@ function Admin({ games, setGames }) {
 
       // Usar la ruta sanitizada que devuelve el helper (path)
       const imageUrl = getPublicUrl(path || fileName);
-      console.log('Imagen subida exitosamente:', imageUrl);
+  logger.debug('Imagen subida exitosamente:', imageUrl);
       
       // Actualizar inmediatamente en el estado local y en la base de datos
       await handleAddImage(gameId, imageUrl);
@@ -248,7 +249,7 @@ function Admin({ games, setGames }) {
       event.target.value = '';
       
     } catch (error) {
-      console.error('Error en handleImageUploadToSupabase:', error);
+      logger.error('Error en handleImageUploadToSupabase:', error);
       alert('Error inesperado al subir la imagen');
     }
   };
@@ -257,7 +258,7 @@ function Admin({ games, setGames }) {
     const fetchGames = async () => {
       const { data, error } = await supabase.from('games').select('*').order('id');
       if (error) {
-        console.error('Error fetching games:', error);
+        logger.error('Error fetching games:', error);
       } else {
         setGames(data);
       }
@@ -275,7 +276,7 @@ function Admin({ games, setGames }) {
           table: 'games' 
         }, 
         (payload) => {
-          console.log('Cambio detectado en la tabla games:', payload);
+          logger.debug('Cambio detectado en la tabla games:', payload);
           
           switch (payload.eventType) {
             case 'INSERT':

@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { useAuth } from '../auth/AuthContext';
 import { useNavigate } from 'react-router-dom';
+import logger from '../utils/logger';
 import './Login.css';
 import Swal from 'sweetalert2';
 
@@ -14,13 +15,13 @@ function Login() {
   const handleSubmit = async (e) => {
     e.preventDefault();
     setError(''); // Limpiar errores anteriores
-    console.log('Iniciando proceso de login...');
+  logger.debug('Iniciando proceso de login...');
     try {
       await login(email, password);
-      console.log('Login exitoso');
+  logger.debug('Login exitoso');
       Swal.fire({ icon: 'success', title: 'Sesión iniciada', timer: 1500, showConfirmButton: false });
     } catch (err) {
-      console.error('Error en login:', err);
+      logger.error('Error en login:', err);
       const msg = err?.message || 'Error al iniciar sesión';
       setError(msg);
       Swal.fire({ icon: 'error', title: 'Error', text: msg });
