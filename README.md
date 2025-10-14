@@ -214,3 +214,52 @@ create trigger on_auth_user_created
 
 ## License
 This project is licensed under the MIT License.
+
+## Vercel deployment (SPA routes)
+
+If you deploy this app to Vercel using `BrowserRouter` (the default React Router), you need to make sure Vercel serves `index.html` for all SPA routes (for example `/login`, `/admin`, `/game/1`). Otherwise you'll see 404s when loading those URLs directly.
+
+Recommended approaches:
+
+- Rewrites on Vercel (recommended):
+  - Add a `vercel.json` at the project root with the following content (already included in this repo):
+
+```json
+{
+  "rewrites": [
+    { "source": "/(.*)", "destination": "/index.html" }
+  ]
+}
+```
+
+  - This tells Vercel to serve `index.html` for any path so your SPA router can handle client-side routes.
+  - After adding `vercel.json`, commit and push, then redeploy in Vercel.
+
+- Hash-based routing (alternative):
+  - If you prefer not to add rewrites, use `HashRouter` in `src/App.jsx`:
+    - Replace `import { BrowserRouter as Router } from 'react-router-dom'` with `import { HashRouter as Router } from 'react-router-dom'`.
+    - URLs will look like `/#/login` but will work without server rewrites.
+
+Environment variables and Vercel:
+
+- Make sure your Supabase variables are set in Vercel (Project Settings -> Environment Variables):
+  - `VITE_SUPABASE_URL` = your Supabase project URL
+  - `VITE_SUPABASE_KEY` = your anon/public key
+
+- If those variables are missing or point to a different Supabase project, the deployed site won't find your data or profiles and the Admin Panel may not appear.
+
+Quick test after deploy:
+
+1. Push your branch (commit already included `vercel.json`):
+
+```powershell
+git add vercel.json README.md
+git commit -m "Add Vercel SPA rewrite and docs"
+git push
+```
+
+2. Wait for Vercel to finish the deployment and open `https://<your-deployment-url>/login` — it should no longer return 404.
+
+3. Log in, and if your admin row exists in `public.users` (role = 'admin') you should see the Admin Panel link in the header.
+
+If you want, I can also add an automated CI check or a deploy preview note in the README.
