@@ -50,8 +50,10 @@ function InnerApp({ games, setGames }) {
           <Route path="/register" element={<Register />} />
         </Routes>
       </main>
-      <footer>
-        <p>© 2025 Pirate Games Finder. All rights reserved.</p>
+      <footer className="app-footer">
+        <div className="container">
+          <p>© 2025 Pirate Games Finder. All rights reserved.</p>
+        </div>
       </footer>
     </div>
   );
