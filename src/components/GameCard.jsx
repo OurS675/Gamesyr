@@ -1,16 +1,36 @@
 import React from 'react';
-import { Link } from 'react-router-dom';
+import { useNavigate } from 'react-router-dom';
 import './GameCard.css';
 
 function GameCard({ game }) {
   const thumb = game.image || (game.images && game.images[0]) || null;
-  const genre = game.genre || '';
-  const description = (game.description || '').replace(/\s+/g, ' ').trim();
-  const shortDesc = description.length > 140 ? description.slice(0, 137) + '…' : description;
-  const firstLink = (game.links && game.links[0] && game.links[0].url) || null;
+  // thumbnail image
+  // (we intentionally avoid link-button logic here; the card always opens details)
+  const navigate = useNavigate();
+
+  const handleOpen = (e) => {
+    // Always navigate to internal detail view when the card itself is clicked.
+    // The action button/link (inside .card-actions) will open external URLs
+    // and stops propagation so this handler won't run for that click.
+    navigate(`/game/${game.id}`);
+  };
+
+  const handleKeyDown = (e) => {
+    if (e.key === 'Enter' || e.key === ' ') {
+      e.preventDefault();
+      handleOpen();
+    }
+  };
 
   return (
-    <article className="game-card" aria-labelledby={`game-${game.id}-title`}>
+    <article
+      className="game-card"
+      aria-labelledby={`game-${game.id}-title`}
+      role="button"
+      tabIndex={0}
+      onClick={handleOpen}
+      onKeyDown={handleKeyDown}
+    >
       {thumb ? (
         <img src={thumb} alt={`${game.name} cover`} className="thumb" />
       ) : (
@@ -25,15 +45,8 @@ function GameCard({ game }) {
       <div className="card-body">
         <div className="meta-row">
           <h3 id={`game-${game.id}-title`}>{game.name}</h3>
-          {genre && <span className="genre-badge">{genre}</span>}
         </div>
-        {shortDesc ? <p className="desc">{shortDesc}</p> : <p className="desc muted">Sin descripción</p>}
-        <div className="card-actions">
-          <Link to={`/game/${game.id}`} className="btn small">Detalles</Link>
-          {firstLink && (
-            <a href={firstLink} className="btn small secondary" target="_blank" rel="noreferrer">Ir al juego</a>
-          )}
-        </div>
+        {/* action buttons removed per request - card click opens detail view */}
       </div>
     </article>
   );

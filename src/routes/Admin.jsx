@@ -3,7 +3,6 @@ import './Admin.css';
 import { useAuth } from '../auth/AuthContext';
 import { supabase } from '../supabaseClient';
 import { uploadFile, getPublicUrl } from '../utils/storage';
-import logger from '../utils/logger';
 
 const genres = ["Action", "Adventure", "RPG", "Shooter", "Puzzle", "Sports", "Strategy"];
 
@@ -51,82 +50,31 @@ function Admin({ games, setGames }) {
   };
 
   const handleEditGame = async (id, field, value) => {
-    const updated = games.map(game => (
-      game.id === id ? { ...game, [field]: field === 'links' ? [value] : value } : game
-    ));
+    // Normalize links so they are always stored as array of objects: [{ name, url }]
+    const updated = games.map(game => {
+      if (game.id !== id) return game;
+      if (field === 'links') {
+        // If caller passed a string (single URL), convert to [{ name: '', url: value }]
+        if (typeof value === 'string') {
+          return { ...game, links: [{ name: '', url: value }] };
+        }
+        // If value is already an array (of objects), use it
+        if (Array.isArray(value)) {
+          return { ...game, links: value };
+        }
+        // Fallback: keep existing
+        return game;
+      }
+      return { ...game, [field]: value };
+    });
+
     setGames(updated);
     const toUpdate = updated.find(g => g.id === id);
-    const { error } = await supabase.from('games').update({ [field]: toUpdate[field] }).eq('id', id);
+    // When updating links, ensure we send the normalized array to the DB
+    const payload = field === 'links' ? { links: toUpdate.links } : { [field]: toUpdate[field] };
+    const { error } = await supabase.from('games').update(payload).eq('id', id);
     if (error) {
       alert('Error al actualizar: ' + error.message);
-    }
-  };
-
-  // --- Link management for existing games ---
-  const handleAddLinkToGame = async (id) => {
-    try {
-      const prev = games.slice();
-      const updated = games.map(game => (
-        game.id === id ? { ...game, links: [...(game.links || []), { name: '', url: '' }] } : game
-      ));
-      setGames(updated);
-
-      const current = updated.find(g => g.id === id);
-      const { error } = await supabase.from('games').update({ links: current.links }).eq('id', id);
-      if (error) {
-        logger.error('Error adding link to DB:', error);
-        alert('Error al agregar el enlace: ' + error.message);
-        setGames(prev);
-      }
-    } catch (error) {
-      logger.error('Error en handleAddLinkToGame:', error);
-      alert('Error inesperado al agregar enlace');
-    }
-  };
-
-  const handleEditLinkForGame = async (gameId, index, field, value) => {
-    try {
-      const prev = games.slice();
-      const updated = games.map(game => {
-        if (game.id !== gameId) return game;
-        const links = (game.links || []).map((ln, i) => i === index ? { ...ln, [field]: value } : ln);
-        return { ...game, links };
-      });
-      setGames(updated);
-
-      const current = updated.find(g => g.id === gameId);
-      const { error } = await supabase.from('games').update({ links: current.links }).eq('id', gameId);
-      if (error) {
-        logger.error('Error updating link in DB:', error);
-        alert('Error al actualizar el enlace: ' + error.message);
-        setGames(prev);
-      }
-    } catch (error) {
-      logger.error('Error en handleEditLinkForGame:', error);
-      alert('Error inesperado al editar enlace');
-    }
-  };
-
-  const handleRemoveLinkFromGame = async (gameId, index) => {
-    try {
-      const prev = games.slice();
-      const updated = games.map(game => {
-        if (game.id !== gameId) return game;
-        const links = (game.links || []).filter((_, i) => i !== index);
-        return { ...game, links };
-      });
-      setGames(updated);
-
-      const current = updated.find(g => g.id === gameId);
-      const { error } = await supabase.from('games').update({ links: current.links }).eq('id', gameId);
-      if (error) {
-        logger.error('Error removing link from DB:', error);
-        alert('Error al eliminar el enlace: ' + error.message);
-        setGames(prev);
-      }
-    } catch (error) {
-      logger.error('Error en handleRemoveLinkFromGame:', error);
-      alert('Error inesperado al eliminar enlace');
     }
   };
 
@@ -162,95 +110,74 @@ function Admin({ games, setGames }) {
   };
 
   const handleAddImage = async (id, newImage) => {
-    try {
-      // Actualizar el estado local inmediatamente
-      const updated = games.map(game => (
-        game.id === id ? { ...game, images: [...(game.images || []), newImage] } : game
-      ));
-      setGames(updated);
-      
-      // Actualizar en la base de datos
-      const current = updated.find(g => g.id === id);
-      const { error } = await supabase.from('games').update({ images: current.images }).eq('id', id);
-      
-      if (error) {
-        logger.error('Error al actualizar imágenes en la base de datos:', error);
-        alert('Error al guardar la imagen en la base de datos');
-        // Revertir el cambio local si hay error
-        setGames(games);
-        return;
-      }
-      
-  logger.debug('Imagen agregada exitosamente al juego:', id);
-    } catch (error) {
-      logger.error('Error en handleAddImage:', error);
-      alert('Error inesperado al agregar la imagen');
+    const updated = games.map(game => (
+      game.id === id ? { ...game, images: [...(game.images || []), newImage] } : game
+    ));
+    setGames(updated);
+    const current = updated.find(g => g.id === id);
+    await supabase.from('games').update({ images: current.images }).eq('id', id);
+  };
+
+  const handleEditGameLink = async (gameId, index, field, value) => {
+    const updated = games.map(g => {
+      if (g.id !== gameId) return g;
+      const links = Array.isArray(g.links) ? [...g.links] : [];
+      links[index] = { ...(links[index] || { name: '', url: '' }), [field]: value };
+      return { ...g, links };
+    });
+    setGames(updated);
+    const toUpdate = updated.find(g => g.id === gameId);
+    const { error } = await supabase.from('games').update({ links: toUpdate.links }).eq('id', gameId);
+    if (error) {
+      alert('Error al actualizar enlaces: ' + error.message);
+    }
+  };
+
+  const handleAddLinkToGame = async (gameId) => {
+    const updated = games.map(g => (
+      g.id === gameId ? { ...g, links: [...(g.links || []), { name: '', url: '' }] } : g
+    ));
+    setGames(updated);
+    const toUpdate = updated.find(g => g.id === gameId);
+    const { error } = await supabase.from('games').update({ links: toUpdate.links }).eq('id', gameId);
+    if (error) {
+      alert('Error al agregar enlace: ' + error.message);
+    }
+  };
+
+  const handleRemoveLinkFromGame = async (gameId, index) => {
+    const updated = games.map(g => (
+      g.id === gameId ? { ...g, links: (g.links || []).filter((_, i) => i !== index) } : g
+    ));
+    setGames(updated);
+    const toUpdate = updated.find(g => g.id === gameId);
+    const { error } = await supabase.from('games').update({ links: toUpdate.links }).eq('id', gameId);
+    if (error) {
+      alert('Error al eliminar enlace: ' + error.message);
     }
   };
 
   const handleRemoveImage = async (id, imageIndex) => {
-    try {
-      // Obtener la imagen que se va a eliminar para logging
-      const gameToUpdate = games.find(g => g.id === id);
-      const imageToRemove = gameToUpdate?.images?.[imageIndex];
-      
-      // Actualizar el estado local inmediatamente
-      const updated = games.map(game => (
-        game.id === id ? { ...game, images: (game.images || []).filter((_, index) => index !== imageIndex) } : game
-      ));
-      setGames(updated);
-      
-      // Actualizar en la base de datos
-      const current = updated.find(g => g.id === id);
-      const { error } = await supabase.from('games').update({ images: current.images }).eq('id', id);
-      
-      if (error) {
-        logger.error('Error al eliminar imagen de la base de datos:', error);
-        alert('Error al eliminar la imagen de la base de datos');
-        // Revertir el cambio local si hay error
-        setGames(games);
-        return;
-      }
-      
-  logger.debug('Imagen eliminada exitosamente del juego:', id, 'Imagen:', imageToRemove);
-    } catch (error) {
-      logger.error('Error en handleRemoveImage:', error);
-      alert('Error inesperado al eliminar la imagen');
-    }
+    const updated = games.map(game => (
+      game.id === id ? { ...game, images: (game.images || []).filter((_, index) => index !== imageIndex) } : game
+    ));
+    setGames(updated);
+    const current = updated.find(g => g.id === id);
+    await supabase.from('games').update({ images: current.images }).eq('id', id);
   };
 
   const handleImageUploadToSupabase = async (event, gameId) => {
     const file = event.target.files[0];
     if (!file) return;
 
-    try {
-      // Crear un nombre único para evitar conflictos
-      const timestamp = Date.now();
-      const fileName = `${gameId}/${timestamp}_${file.name}`;
-      
-  logger.debug('Subiendo imagen:', fileName);
-      const { data, error, path } = await uploadFile(fileName, file);
+    const fileName = `${gameId}/${file.name}`;
+    const { data, error } = await uploadFile(fileName, file);
 
-      if (error) {
-        logger.error('Error uploading image:', error);
-        // Mostrar mensaje claro al usuario
-        alert('Error al subir la imagen: ' + (error.message || JSON.stringify(error)));
-        return;
-      }
-
-      // Usar la ruta sanitizada que devuelve el helper (path)
-      const imageUrl = getPublicUrl(path || fileName);
-  logger.debug('Imagen subida exitosamente:', imageUrl);
-      
-      // Actualizar inmediatamente en el estado local y en la base de datos
-      await handleAddImage(gameId, imageUrl);
-      
-      // Limpiar el input file
-      event.target.value = '';
-      
-    } catch (error) {
-      logger.error('Error en handleImageUploadToSupabase:', error);
-      alert('Error inesperado al subir la imagen');
+    if (error) {
+      console.error('Error uploading image:', error);
+    } else {
+      const imageUrl = getPublicUrl(fileName);
+      handleAddImage(gameId, imageUrl);
     }
   };
 
@@ -258,54 +185,13 @@ function Admin({ games, setGames }) {
     const fetchGames = async () => {
       const { data, error } = await supabase.from('games').select('*').order('id');
       if (error) {
-        logger.error('Error fetching games:', error);
+        console.error('Error fetching games:', error);
       } else {
         setGames(data);
       }
     };
 
     fetchGames();
-
-    // Configurar suscripción en tiempo real para cambios en la tabla games
-    const subscription = supabase
-      .channel('games-changes')
-      .on('postgres_changes', 
-        { 
-          event: '*', 
-          schema: 'public', 
-          table: 'games' 
-        }, 
-        (payload) => {
-          logger.debug('Cambio detectado en la tabla games:', payload);
-          
-          switch (payload.eventType) {
-            case 'INSERT':
-              setGames(prevGames => [...prevGames, payload.new]);
-              break;
-            case 'UPDATE':
-              setGames(prevGames => 
-                prevGames.map(game => 
-                  game.id === payload.new.id ? payload.new : game
-                )
-              );
-              break;
-            case 'DELETE':
-              setGames(prevGames => 
-                prevGames.filter(game => game.id !== payload.old.id)
-              );
-              break;
-            default:
-              // Para cualquier otro evento, refrescar toda la lista
-              fetchGames();
-          }
-        }
-      )
-      .subscribe();
-
-    // Cleanup: cancelar suscripción cuando el componente se desmonte
-    return () => {
-      subscription.unsubscribe();
-    };
   }, [setGames]);
 
   const handleDeleteGame = async (id) => {
@@ -331,6 +217,12 @@ function Admin({ games, setGames }) {
           placeholder="Game Name"
           value={newGame.name}
           onChange={(e) => setNewGame({ ...newGame, name: e.target.value })}
+        />
+        <input
+          type="text"
+          placeholder="Image URL"
+          value={newGame.image}
+          onChange={(e) => setNewGame({ ...newGame, image: e.target.value })}
         />
         <input
           type="file"
@@ -408,34 +300,28 @@ function Admin({ games, setGames }) {
               onChange={(e) => handleEditGame(game.id, 'name', e.target.value)}
               placeholder="Nombre del juego"
             />
-            <input
-              type="text"
-              value={game.links[0].url}
-              onChange={(e) => handleEditGame(game.id, 'links', e.target.value)}
-              placeholder="Enlace del juego"
-            />
-            <div className="links-section">
-              <h5>Enlaces</h5>
+            <div className="links-edit">
               {(game.links || []).map((link, idx) => (
-                <div key={idx} className="link-row">
+                <div key={idx} className="link-item">
                   <input
                     type="text"
-                    value={link.name || ''}
                     placeholder="Nombre del enlace"
-                    onChange={(e) => handleEditLinkForGame(game.id, idx, 'name', e.target.value)}
+                    value={link.name || ''}
+                    onChange={(e) => handleEditGameLink(game.id, idx, 'name', e.target.value)}
                   />
                   <input
                     type="text"
-                    value={link.url || ''}
                     placeholder="URL del enlace"
-                    onChange={(e) => handleEditLinkForGame(game.id, idx, 'url', e.target.value)}
+                    value={link.url || ''}
+                    onChange={(e) => handleEditGameLink(game.id, idx, 'url', e.target.value)}
                   />
                   <button type="button" onClick={() => handleRemoveLinkFromGame(game.id, idx)}>Eliminar</button>
                 </div>
               ))}
-              <button type="button" onClick={() => handleAddLinkToGame(game.id)}>Agregar enlace</button>
+              <button type="button" onClick={() => handleAddLinkToGame(game.id)}>Agregar Enlace</button>
             </div>
-            
+            {/* Image URL and file selector removed from per-game edit area to avoid duplication.
+                Use 'Manage Images' below to upload and manage images per game. */}
             <textarea
               value={game.description}
               onChange={(e) => handleEditGame(game.id, 'description', e.target.value)}
@@ -458,35 +344,27 @@ function Admin({ games, setGames }) {
               ))}
             </select>
             <div className="image-management">
-              <h4>Gestión de Imágenes ({(game.images || []).length} imágenes)</h4>
+              <h4>Manage Images</h4>
               <div className="image-list">
                 {(game.images || []).map((img, index) => (
                   <div key={index} className="image-item">
-                    <img src={img} alt={`Game Image ${index + 1}`} style={{width: '100px', height: '100px', objectFit: 'cover'}} />
-                    <button 
-                      onClick={() => handleRemoveImage(game.id, index)}
-                      className="remove-image-btn"
-                      title="Eliminar imagen"
-                    >
-                      ❌ Eliminar
-                    </button>
+                    <img src={img} alt={`Game Image ${index + 1}`} />
+                    <button onClick={() => handleRemoveImage(game.id, index)}>Remove</button>
                   </div>
                 ))}
               </div>
-              <div className="image-upload-section">
-                <label htmlFor={`file-upload-${game.id}`} className="file-upload-label">
-                  📁 Subir nueva imagen
-                </label>
-                <input
-                  id={`file-upload-${game.id}`}
-                  type="file"
-                  accept="image/*"
-                  onChange={(e) => handleImageUploadToSupabase(e, game.id)}
-                  style={{display: 'none'}}
-                />
-                <small>Formatos soportados: JPG, PNG, GIF</small>
-              </div>
-              <button type="button" onClick={() => handleDeleteGame(game.id)} className="delete-game-btn">🗑️ Eliminar Juego</button>
+              <input
+                type="file"
+                accept="image/*"
+                onChange={(e) => {
+                  const file = e.target.files[0];
+                  if (file) {
+                    const imageUrl = URL.createObjectURL(file);
+                    handleAddImage(game.id, imageUrl);
+                  }
+                }}
+              />
+              <button type="button" onClick={() => handleDeleteGame(game.id)}>Delete</button>
             </div>
           </li>
         ))}

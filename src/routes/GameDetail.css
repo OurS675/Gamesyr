@@ -1,27 +1,63 @@
 /* Styles for the GameDetail route */
 .game-detail {
   text-align: center;
-  padding: 20px;
+  padding: 28px;
   position: relative;
-  border-radius: 10px;
-  box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+  border-radius: var(--radius-md);
+  background: linear-gradient(180deg, rgba(255,255,255,0.02), rgba(255,255,255,0.01));
+  box-shadow: var(--shadow-1);
+  color: var(--text);
 }
 
 .game-detail img {
   max-width: 100%;
   height: auto;
-  border: 2px solid #f4d03f;
-  border-radius: 10px;
+  border-radius: var(--radius-md);
   margin: 20px 0;
+  outline: 2px solid transparent;
 }
 
 .game-image {
-  width: 500px;
-  height: 350px;
+  width: 100%;
+  max-width: 720px;
+  height: auto;
+  aspect-ratio: 16 / 9;
   object-fit: cover;
-  border-radius: 10px;
-  box-shadow: 0 4px 6px rgba(0, 0, 0, 0.3);
+  border-radius: var(--radius-md);
+  box-shadow: 0 8px 24px rgba(0,0,0,0.6);
+  border: 1px solid rgba(255,255,255,0.03);
 }
+
+/* Image frame to contain stacked images for crossfade */
+.image-frame{
+  width:100%;
+  max-width:720px;
+  aspect-ratio:16/9;
+  position:relative;
+  overflow:hidden;
+  border-radius:var(--radius-md);
+  background:var(--surface);
+  display:block;
+}
+
+.image-frame .game-image{
+  position:absolute;
+  inset:0;
+  width:100%;
+  height:100%;
+  object-fit:contain; /* preserve aspect ratio without distortion */
+  transition:opacity 650ms cubic-bezier(.2,.8,.2,1), transform 650ms cubic-bezier(.2,.8,.2,1);
+  opacity:1;
+  transform:scale(1);
+}
+
+.image-frame .image-prev{opacity:1;z-index:1;filter:blur(1px);transform:scale(1.02)}
+.image-frame .image-current{opacity:1;z-index:2}
+.image-frame .image-prev[hidden], .image-frame .image-current[hidden]{opacity:0}
+
+/* When prevImage is present we fade it out by lowering opacity via JS (prevImage removed after timeout) */
+.image-frame .image-prev{opacity:0.0001}
+.image-frame .image-current{opacity:1}
 
 .game-detail ul {
   list-style: none;
@@ -33,25 +69,112 @@
 }
 
 .game-detail ul li a {
-  color: #f4d03f;
+  color: var(--accent);
   text-decoration: none;
+  font-weight: 600;
 }
 
-.game-detail ul li a:hover {
+.game-detail ul li a:hover,
+.game-detail ul li a:focus {
   text-decoration: underline;
+  outline: none;
 }
 
 .game-description {
-  margin-top: 10px;
-  font-size: 1.2rem;
-  color: #333;
+  margin-top: 14px;
+  font-size: 1.125rem;
+  line-height: 1.6;
+  color: var(--text);
+  max-width: 900px;
+  margin-left: auto;
+  margin-right: auto;
 }
 
 .game-notes {
-  margin-top: 10px;
-  font-size: 1rem;
-  color: #555;
+  margin-top: 12px;
+  font-size: 0.95rem;
+  color: var(--muted);
   font-style: italic;
+}
+
+/* Comments */
+.comments{margin-top:20px;max-width:920px;margin-left:auto;margin-right:auto;text-align:left;background:linear-gradient(180deg, rgba(255,255,255,0.02), rgba(255,255,255,0.01));padding:18px;border-radius:12px;border:1px solid rgba(255,255,255,0.03)}
+
+/* Estilos para comentarios anidados */
+.comment-reply {
+  margin-left: 40px;
+  position: relative;
+}
+
+.comment-reply::before {
+  content: "";
+  position: absolute;
+  left: -20px;
+  top: 0;
+  bottom: 0;
+  width: 2px;
+  background: rgba(255,255,255,0.1);
+}
+
+/* Botones de acciones de comentarios */
+.delete-button {
+  background: none;
+  border: none;
+  color: var(--danger);
+  cursor: pointer;
+  padding: 4px 8px;
+  border-radius: 4px;
+  opacity: 0.7;
+  transition: opacity 0.2s;
+}
+
+.delete-button:hover {
+  opacity: 1;
+  background: rgba(255,0,0,0.1);
+}
+
+.reply-button {
+  background: none;
+  border: none;
+  color: var(--accent);
+  cursor: pointer;
+  padding: 4px 8px;
+  font-size: 0.9rem;
+  border-radius: 4px;
+  opacity: 0.8;
+  transition: opacity 0.2s;
+}
+
+.reply-button:hover {
+  opacity: 1;
+  background: rgba(124,58,237,0.1);
+}
+
+.comment-actions {
+  margin-top: 8px;
+  display: flex;
+  gap: 8px;
+}
+.comments h3{margin-bottom:12px;color:var(--text);font-size:1.15rem}
+.comments-list{display:flex;flex-direction:column;gap:14px}
+.comment{display:flex;gap:12px;align-items:flex-start;background:transparent;padding:0;border-radius:8px}
+.comment-left{flex:0 0 48px}
+.comment-avatar{width:44px;height:44px;border-radius:50%;background:linear-gradient(135deg,var(--accent),var(--accent-2));display:flex;align-items:center;justify-content:center;color:white;font-weight:700;font-size:1rem;box-shadow:0 4px 12px rgba(2,6,23,0.6)}
+.comment-main{flex:1;}
+.comment-meta{font-size:0.9rem;color:var(--muted);margin-bottom:6px;display:flex;gap:8px;align-items:center}
+.comment-meta strong{color:var(--text);font-weight:600}
+.comment-meta .time{font-size:0.85rem;color:var(--muted)}
+.comment-body{font-size:1rem;color:var(--text);background:rgba(255,255,255,0.02);padding:12px;border-radius:10px;border:1px solid rgba(255,255,255,0.02);box-shadow:0 6px 18px rgba(0,0,0,0.35)}
+.comment-form{margin-top:14px;display:flex;flex-direction:column;gap:10px}
+.comment-form textarea{width:100%;padding:12px;border-radius:10px;border:1px solid rgba(255,255,255,0.06);background:transparent;color:var(--text);resize:vertical}
+.comment-actions{display:flex;justify-content:flex-end}
+.comments .error{color:var(--danger)}
+
+@media (max-width:720px){
+  .comment{gap:10px}
+  .comment-left{flex:0 0 40px}
+  .comment-avatar{width:36px;height:36px;font-size:0.9rem}
+  .comment-body{font-size:0.98rem}
 }
 
 /* Styles for the carousel */
@@ -60,41 +183,52 @@
   align-items: center;
   justify-content: center;
   position: relative;
-  width: 500px;
-  height: 350px;
-  margin: 0 auto;
+  width: 100%;
+  max-width: 720px;
+  margin: 0 auto 8px;
 }
 
 .carousel img {
   width: 100%;
-  height: 100%;
+  height: auto;
   object-fit: cover;
-  aspect-ratio: 1 / 1; /* Makes the image square */
-  margin: 10px; /* Adds mandatory margin */
+  border-radius: var(--radius-md);
 }
 
 .carousel-button {
-  background: rgba(0, 0, 0, 0.5);
-  color: white;
-  border: none;
+  background: rgba(255,255,255,0.06);
+  color: var(--text);
+  border: 1px solid rgba(255,255,255,0.03);
   border-radius: 50%;
-  width: 40px;
-  height: 40px;
-  font-size: 1.5rem;
+  width: 44px;
+  height: 44px;
+  font-size: 1.25rem;
   cursor: pointer;
   position: absolute;
   top: 50%;
   transform: translateY(-50%);
+  z-index: 20; /* ensure buttons are above images */
+  display: flex;
+  align-items: center;
+  justify-content: center;
 }
 
 .carousel-button:hover {
-  background: rgba(0, 0, 0, 0.8);
+  background: rgba(255,255,255,0.12);
 }
 
+.carousel-button:focus{outline:2px solid var(--accent);box-shadow:0 4px 12px rgba(0,0,0,0.4)}
+
 .carousel-button:first-of-type {
-  left: -50px;
+  left: 8px;
 }
 
 .carousel-button:last-of-type {
-  right: -50px;
+  right: 8px;
+}
+
+@media (max-width:720px){
+  .game-image{max-width:100%;height:auto}
+  .carousel-button{width:36px;height:36px;font-size:1rem}
+  .game-detail{padding:16px}
 }

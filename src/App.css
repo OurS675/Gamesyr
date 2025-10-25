@@ -1,19 +1,17 @@
 body {
   margin: 0;
   font-family: 'Treasure Map Deadhand', sans-serif;
-  background-color: #0a1a2a;
+  min-height: 100vh;
   color: #f4f4f4;
+  background: #0a1a2a;
 }
 
 .app {
   text-align: center;
+  min-height: 100vh;
+  background: linear-gradient(180deg, #0a1a2a 0%, #071028 100%);
 }
 
-.pirate-theme {
-  background-image: url('/public/assets/pirate-background.jpg'); /* Replace with a pirate-themed background */
-  background-size: cover;
-  background-position: center;
-}
 
 .app-header {
   padding: 20px;

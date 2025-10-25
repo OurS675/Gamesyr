@@ -100,93 +100,10 @@
   box-shadow: 0 4px 6px rgba(0, 0, 0, 0.2);
 }
 
-.image-management {
-  margin-top: 15px;
-  padding: 15px;
-  border: 2px solid #f4d03f;
-  border-radius: 8px;
-  background: rgba(244, 208, 63, 0.1);
-}
-
-.image-management h4 {
-  margin: 0 0 10px 0;
-  color: #f4d03f;
-  font-size: 1.1em;
-}
-
-.image-list {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 10px;
-  margin-bottom: 15px;
-}
-
-.image-item {
-  position: relative;
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  gap: 5px;
-  padding: 8px;
-  border: 1px solid #ddd;
-  border-radius: 5px;
-  background: rgba(255, 255, 255, 0.9);
-}
-
 .image-item img {
   width: 100px;
   height: 100px;
   object-fit: cover;
-  border-radius: 4px;
-  border: 1px solid #ccc;
-}
-
-.remove-image-btn {
-  padding: 4px 8px !important;
-  font-size: 0.8em !important;
-  background: #e74c3c !important;
-  color: white !important;
-  border: none !important;
-  border-radius: 3px !important;
-  cursor: pointer;
-  transition: background 0.2s;
-}
-
-.remove-image-btn:hover {
-  background: #c0392b !important;
-}
-
-.image-upload-section {
-  display: flex;
-  flex-direction: column;
-  gap: 5px;
-  margin-bottom: 10px;
-}
-
-.file-upload-label {
-  display: inline-block;
-  padding: 10px 15px;
-  background: #3498db;
-  color: white;
-  border-radius: 5px;
-  cursor: pointer;
-  text-align: center;
-  transition: background 0.2s;
-  font-weight: bold;
-}
-
-.file-upload-label:hover {
-  background: #2980b9;
-}
-
-.delete-game-btn {
-  background: #e74c3c !important;
-  color: white !important;
-  margin-top: 10px;
-}
-
-.delete-game-btn:hover {
-  background: #c0392b !important;
 }
 
 select {
