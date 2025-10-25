@@ -3,7 +3,10 @@
   flex-direction: column;
   align-items: center;
   justify-content: center;
-  height: 100vh;
+  min-height: 100vh;
+  width: 100%;
+  padding: 20px;
+  box-sizing: border-box;
   background: url('/assets/pirate-background.jpg') no-repeat center center/cover;
   color: #f4f4f4;
   font-family: 'Pirata One', cursive;
@@ -14,6 +17,7 @@
   font-size: 3rem;
   margin-bottom: 1.5rem;
   text-shadow: 3px 3px 6px rgba(0, 0, 0, 0.8);
+  text-align: center;
 }
 
 .register-container .form-group {
@@ -23,6 +27,28 @@
   display: flex;
   flex-direction: column;
   align-items: center;
+}
+
+/* Responsive styles */
+@media (max-width: 720px) {
+  .register-container h2 {
+    font-size: 2.5rem;
+  }
+}
+
+@media (max-width: 480px) {
+  .register-container {
+    padding: 15px;
+  }
+  
+  .register-container h2 {
+    font-size: 2rem;
+    margin-bottom: 1rem;
+  }
+  
+  .register-container .form-group {
+    max-width: 100%;
+  }
 }
 
 .register-container .form-group label {

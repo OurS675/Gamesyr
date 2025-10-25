@@ -7,6 +7,21 @@
   background: linear-gradient(180deg, rgba(255,255,255,0.02), rgba(255,255,255,0.01));
   box-shadow: var(--shadow-1);
   color: var(--text);
+  width: 100%;
+  max-width: 100%;
+}
+
+/* Responsive styles for GameDetail */
+@media (max-width: 720px) {
+  .game-detail {
+    padding: 20px;
+  }
+}
+
+@media (max-width: 480px) {
+  .game-detail {
+    padding: 15px;
+  }
 }
 
 .game-detail img {
@@ -99,6 +114,95 @@
 
 /* Comments */
 .comments{margin-top:20px;max-width:920px;margin-left:auto;margin-right:auto;text-align:left;background:linear-gradient(180deg, rgba(255,255,255,0.02), rgba(255,255,255,0.01));padding:18px;border-radius:12px;border:1px solid rgba(255,255,255,0.03)}
+
+/* Estilos para el sistema de calificación */
+.rating-section {
+  margin-top: 30px;
+  background-color: #0a1a2a;
+  border-radius: 10px;
+  padding: 20px;
+  box-shadow: 0 4px 6px rgba(0, 0, 0, 0.2);
+}
+
+.star-rating {
+  display: flex;
+  margin-bottom: 15px;
+}
+
+.star {
+  cursor: pointer;
+  font-size: 24px;
+  margin-right: 5px;
+}
+
+.review-textarea {
+  width: 100%;
+  min-height: 100px;
+  padding: 10px;
+  margin-bottom: 15px;
+  background-color: #1a2a3a;
+  border: 1px solid #2a3f5f;
+  border-radius: 5px;
+  color: white;
+  resize: vertical;
+}
+
+.submit-rating {
+  padding: 10px 20px;
+  background-color: #007bff;
+  color: white;
+  border: none;
+  border-radius: 5px;
+  cursor: pointer;
+  transition: background-color 0.3s;
+}
+
+.submit-rating:hover {
+  background-color: #0056b3;
+}
+
+.submit-rating:disabled {
+  background-color: #6c757d;
+  cursor: not-allowed;
+}
+
+.reviews-list {
+  margin-top: 30px;
+}
+
+.review-item {
+  padding: 15px;
+  border-bottom: 1px solid #2a3f5f;
+  margin-bottom: 15px;
+}
+
+.review-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 10px;
+}
+
+.review-author {
+  font-weight: bold;
+  color: #007bff;
+}
+
+.review-stars {
+  display: flex;
+}
+
+.review-text {
+  margin-bottom: 10px;
+  line-height: 1.5;
+}
+
+.review-date {
+  font-size: 0.8rem;
+  color: #6c757d;
+  display: block;
+  text-align: right;
+}
 
 /* Estilos para comentarios anidados */
 .comment-reply {

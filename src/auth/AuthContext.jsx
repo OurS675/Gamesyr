@@ -2,12 +2,15 @@ import React, { createContext, useContext, useEffect, useState, useRef } from 'r
 import logger from '../utils/logger';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { supabase } from '../supabaseClient';
+import { jwtDecode } from "jwt-decode";
 
 const AuthContext = createContext();
 
 export function AuthProvider({ children }) {
   const [user, setUser] = useState(null);
   const [isLoading, setIsLoading] = useState(true);
+  const [lastActivity, setLastActivity] = useState(Date.now());
+  const [sessionTimeout, setSessionTimeout] = useState(30 * 60 * 1000); // 30 minutos
   const userRef = useRef(null);
   const navigate = useNavigate();
   const location = useLocation();
@@ -16,6 +19,34 @@ export function AuthProvider({ children }) {
   useEffect(() => {
     userRef.current = user;
   }, [user]);
+  
+  // Control de inactividad y cierre de sesión automático
+  useEffect(() => {
+    const handleActivity = () => {
+      setLastActivity(Date.now());
+    };
+    
+    // Actualizar lastActivity en interacciones del usuario
+    window.addEventListener('mousemove', handleActivity);
+    window.addEventListener('keydown', handleActivity);
+    window.addEventListener('click', handleActivity);
+    
+    // Verificar inactividad cada minuto
+    const checkInactivity = setInterval(() => {
+      if (user && Date.now() - lastActivity > sessionTimeout) {
+        // Cerrar sesión por inactividad
+        supabase.auth.signOut();
+        navigate('/login', { state: { message: 'Sesión cerrada por inactividad' } });
+      }
+    }, 60000);
+    
+    return () => {
+      window.removeEventListener('mousemove', handleActivity);
+      window.removeEventListener('keydown', handleActivity);
+      window.removeEventListener('click', handleActivity);
+      clearInterval(checkInactivity);
+    };
+  }, [user, lastActivity, sessionTimeout, navigate]);
 
   // Ajustar la consulta para obtener el perfil del usuario y manejar errores correctamente
   const getProfileByAuthId = async (authUserId) => {
@@ -199,22 +230,30 @@ export function AuthProvider({ children }) {
   const register = async (username, password, email) => {
   logger.debug('Intentando registrar usuario:', username);
     try {
+      // Primero verificamos si el usuario ya existe
+      const { data: existingUsers } = await supabase
+        .from('users')
+        .select('*')
+        .eq('email', email)
+        .limit(1);
+      
+      if (existingUsers && existingUsers.length > 0) {
+        logger.error('El usuario ya existe en la base de datos');
+        throw new Error('Ya existe un usuario con este correo electrónico.');
+      }
+      
+      // Si no existe, procedemos con el registro
       const { data, error } = await supabase.auth.signUp({ email, password });
       if (error) throw new Error(error.message);
 
-      const authUserId = data.user?.id;
-      if (authUserId) {
-        const { error: insertError } = await supabase
-          .from('users')
-          .insert([{ auth_user_id: authUserId, username, email, role: 'user' }]);
-
-        if (insertError) {
-          logger.error('Error al insertar usuario en la base de datos:', insertError);
-          throw new Error('Error al registrar el usuario en la base de datos.');
-        }
-      }
-
-  logger.debug('Usuario registrado exitosamente:', username);
+      // El trigger handle_new_user() se encargará de crear el perfil automáticamente
+      // No necesitamos insertar manualmente en la tabla users
+      
+      logger.debug('Usuario registrado exitosamente:', username);
+      
+      // Esperamos un momento para que el trigger se ejecute
+      await new Promise(resolve => setTimeout(resolve, 1000));
+      
     } catch (error) {
       logger.error('Error completo en registro:', error);
       throw error;
@@ -374,6 +413,17 @@ export function AuthProvider({ children }) {
     }
   }, [user]);
 
+  // Verificar si el token JWT es válido
+  const validateToken = (token) => {
+    try {
+      const decoded = jwtDecode(token);
+      const currentTime = Date.now() / 1000;
+      return decoded.exp > currentTime;
+    } catch (error) {
+      return false;
+    }
+  };
+  
   // Role-based access helpers
   const isAdmin = user?.role === 'admin';
   const isUser = user?.role === 'user';

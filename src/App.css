@@ -4,19 +4,22 @@ body {
   min-height: 100vh;
   color: #f4f4f4;
   background: #0a1a2a;
+  width: 100%;
+  overflow-x: hidden;
 }
 
 .app {
   text-align: center;
   min-height: 100vh;
+  width: 100%;
   background: linear-gradient(180deg, #0a1a2a 0%, #071028 100%);
 }
-
 
 .app-header {
   padding: 20px;
   background: linear-gradient(90deg, #1a2a3a, #0a1a2a);
   color: #f4d03f;
+  width: 100%;
 }
 
 .search-bar {
@@ -35,6 +38,7 @@ body {
   justify-content: center;
   gap: 20px;
   padding: 20px;
+  width: 100%;
 }
 
 .game-card {
@@ -44,7 +48,32 @@ body {
   padding: 15px;
   color: #f4f4f4;
   width: 200px;
+  max-width: 100%;
   text-align: center;
+}
+
+/* Responsive styles */
+@media (max-width: 720px) {
+  .search-bar {
+    width: 90%;
+  }
+}
+
+@media (max-width: 480px) {
+  .app-header {
+    padding: 15px 10px;
+  }
+  
+  .search-bar {
+    width: 95%;
+    padding: 8px;
+    font-size: 14px;
+  }
+  
+  .game-card {
+    width: 100%;
+    margin: 0 auto 15px;
+  }
 }
 
 .game-card a {

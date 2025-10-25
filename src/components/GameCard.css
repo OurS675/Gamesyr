@@ -6,9 +6,18 @@
   padding: 16px;
   color: #ffffff;
   width: 220px;
+  max-width: 100%;
   text-align: left;
   box-shadow: 0 8px 24px rgba(0, 0, 0, 0.5);
   transition: all 0.3s ease;
+}
+
+/* Responsive styles for GameCard */
+@media (max-width: 480px) {
+  .game-card {
+    width: 100%;
+    margin: 0 auto 16px;
+  }
 }
 
 .game-card:hover {

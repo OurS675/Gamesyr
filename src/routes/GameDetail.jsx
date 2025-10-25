@@ -3,6 +3,8 @@ import { useParams, Link } from 'react-router-dom';
 import './GameDetail.css';
 import { supabase } from '../supabaseClient';
 import { useAuth } from '../auth/AuthContext';
+import { useLoading } from '../context/LoadingContext';
+import { FaStar, FaRegStar } from 'react-icons/fa';
 
 function GameDetail({ games }) {
   const { id } = useParams();
@@ -13,16 +15,95 @@ function GameDetail({ games }) {
     typeof link === 'string' ? { name: '', url: link } : link
   )) : [];
   const { user, isAdmin } = useAuth();
+  const { showLoader, hideLoader } = useLoading();
   const [comments, setComments] = useState([]);
   const [commentsLoading, setCommentsLoading] = useState(false);
   const [commentsError, setCommentsError] = useState(null);
   const [newComment, setNewComment] = useState('');
   const [replyingTo, setReplyingTo] = useState(null);
+  const [userRating, setUserRating] = useState(0);
+  const [hoverRating, setHoverRating] = useState(0);
+  const [reviews, setReviews] = useState([]);
+  const [reviewText, setReviewText] = useState('');
 
+  // Función para enviar calificación y reseña
+  const submitRating = async () => {
+    if (!user || !game) return;
+    
+    try {
+      showLoader();
+      const { data, error } = await supabase
+        .from('reviews')
+        .upsert({
+          user_id: user.id,
+          game_id: game.id,
+          rating: userRating,
+          comment: reviewText,
+          created_at: new Date()
+        })
+        .select();
+        
+      if (error) throw error;
+      
+      // Actualizar la lista de reseñas
+      fetchReviews();
+      setReviewText('');
+      
+    } catch (error) {
+      console.error('Error al enviar calificación:', error);
+    } finally {
+      hideLoader();
+    }
+  };
+  
+  // Función para obtener reseñas
+  const fetchReviews = async () => {
+    if (!game) return;
+    
+    try {
+      showLoader();
+      const { data, error } = await supabase
+        .from('reviews')
+        .select('*')
+        .eq('game_id', game.id)
+        .order('created_at', { ascending: false });
+        
+      if (error) throw error;
+      
+      setReviews(data || []);
+      
+      // Si el usuario actual ya ha calificado, mostrar su calificación
+      const userReview = data?.find(r => r.user_id === user?.id);
+      if (userReview) {
+        setUserRating(userReview.rating);
+        setReviewText(userReview.comment || '');
+      }
+      
+    } catch (error) {
+      console.error('Error al obtener reseñas:', error);
+    } finally {
+      hideLoader();
+    }
+  };
+
+  useEffect(() => {
+    let mounted = true;
+    
+    // Cargar reseñas al montar el componente
+    if (game && user) {
+      fetchReviews();
+    }
+    
+    return () => {
+      mounted = false;
+    };
+  }, [game, user]);
+  
   useEffect(() => {
     let mounted = true;
     const fetchComments = async () => {
       if (!game) return;
+      showLoader(); // Mostrar el loader global
       setCommentsLoading(true);
       setCommentsError(null);
       try {
@@ -66,7 +147,10 @@ function GameDetail({ games }) {
         console.error('Error fetching comments:', err);
         if (mounted) setCommentsError('No se pueden cargar los comentarios.');
       } finally {
-        if (mounted) setCommentsLoading(false);
+        if (mounted) {
+          setCommentsLoading(false);
+          hideLoader(); // Ocultar el loader global
+        }
       }
     };
     fetchComments();
@@ -227,6 +311,76 @@ function GameDetail({ games }) {
           </li>
         ))}
       </ul>
+      
+      {/* Sistema de calificación */}
+      <div className="rating-section">
+        <h3>Calificación y Reseñas</h3>
+        
+        {user ? (
+          <div className="user-rating">
+            <div className="star-rating">
+              {[...Array(5)].map((_, i) => (
+                <span 
+                  key={i}
+                  className="star"
+                  onMouseEnter={() => setHoverRating(i + 1)}
+                  onMouseLeave={() => setHoverRating(0)}
+                  onClick={() => setUserRating(i + 1)}
+                >
+                  {(hoverRating || userRating) > i ? <FaStar color="#FFD700" /> : <FaRegStar />}
+                </span>
+              ))}
+            </div>
+            
+            <textarea
+              className="review-textarea"
+              placeholder="Escribe tu reseña (opcional)"
+              value={reviewText}
+              onChange={(e) => setReviewText(e.target.value)}
+            />
+            
+            <button 
+              className="submit-rating"
+              onClick={submitRating}
+              disabled={!userRating}
+            >
+              Enviar Calificación
+            </button>
+          </div>
+        ) : (
+          <p>Inicia sesión para calificar este juego</p>
+        )}
+        
+        {/* Lista de reseñas */}
+        <div className="reviews-list">
+          <h4>Reseñas de usuarios ({reviews.length})</h4>
+          
+          {reviews.length > 0 ? (
+            reviews.map((review) => (
+              <div key={review.id} className="review-item">
+                <div className="review-header">
+                  <span className="review-author">{review.users?.username || 'Usuario'}</span>
+                  <div className="review-stars">
+                    {[...Array(5)].map((_, i) => (
+                      <span key={i}>
+                        {review.rating > i ? <FaStar color="#FFD700" /> : <FaRegStar />}
+                      </span>
+                    ))}
+                  </div>
+                </div>
+                {review.comment && (
+                <p className="review-text">{review.comment}</p>
+              )}
+                <span className="review-date">
+                  {new Date(review.created_at).toLocaleDateString()}
+                </span>
+              </div>
+            ))
+          ) : (
+            <p>No hay reseñas todavía. ¡Sé el primero en calificar!</p>
+          )}
+        </div>
+      </div>
       <section className="comments">
         <h3>Comentarios</h3>
         {commentsLoading ? <p>Cargando comentarios...</p> : null}

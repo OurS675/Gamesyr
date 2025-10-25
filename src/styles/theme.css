@@ -1,5 +1,6 @@
 /* Theme variables and global reset */
 :root{
+  /* Dark theme (default) */
   --bg: #0f1724;
   --surface: #121826;
   --muted: #94a3b8;
@@ -8,35 +9,57 @@
   --accent-2: #7c3aed; /* purple */
   --danger: #ef4444;
   --success: #10b981;
+}
 
+/* Light theme */
+.light-theme {
+  --bg: #f5f5f5;
+  --surface: #ffffff;
+  --muted: #64748b;
+  --text: #1e293b;
+  --accent: #0891b2; /* teal */
+  --accent-2: #6d28d9; /* purple */
+  --danger: #dc2626;
+  --success: #059669;
+}
+
+:root {
   --radius-sm: 6px;
   --radius-md: 12px;
   --shadow-1: 0 4px 12px rgba(2,6,23,0.6);
 
   --font-sans: Inter, system-ui, -apple-system, 'Segoe UI', Roboto, 'Helvetica Neue', Arial;
+  
+  /* Responsive breakpoints */
+  --breakpoint-sm: 480px;
+  --breakpoint-md: 720px;
+  --breakpoint-lg: 1024px;
+  --breakpoint-xl: 1280px;
 }
 
 /* Reset / base */
 *{box-sizing: border-box;margin:0;padding:0}
-html,body,#root{height:100%}
+html,body,#root{height:100%;width:100%}
 body{
   font-family: var(--font-sans);
   background: linear-gradient(180deg,var(--bg),#071028);
   color:var(--text);
   -webkit-font-smoothing:antialiased;
   -moz-osx-font-smoothing:grayscale;
+  overflow-x: hidden;
 }
 
 a{color:var(--accent);text-decoration:none}
+
+img, video {
+  max-width: 100%;
+  height: auto;
+}
 
 main{padding:24px;max-width:100%;margin:24px auto}
 header,footer{max-width:100%;margin:0 auto;padding:12px 24px}
 
 /* Simple utility classes */
-@media (max-width:720px){
-  main{padding:12px;margin:12px auto}
-  .container{padding:0 12px}
-}
 .container{max-width:1200px;margin:0 auto;padding:0 16px}
 .btn{background:var(--accent);color:#022;display:inline-block;padding:8px 12px;border-radius:8px;border:none;cursor:pointer}
 .btn.secondary{background:transparent;border:1px solid rgba(255,255,255,0.06);color:var(--text)}
@@ -46,4 +69,45 @@ header,footer{max-width:100%;margin:0 auto;padding:12px 24px}
 .pirate-theme footer{border-top:1px solid rgba(255,255,255,0.03);text-align:center;padding:18px}
 
 /* Responsive */
-@media (max-width:720px){main{padding:12px;margin:12px auto}}
+/* Extra small devices (phones, 480px and down) */
+@media (max-width: 480px) {
+  main {
+    padding: 10px;
+    margin: 10px auto;
+  }
+  .container {
+    padding: 0 10px;
+  }
+  .btn {
+    padding: 6px 10px;
+    font-size: 0.9rem;
+  }
+}
+
+/* Small devices (tablets, 720px and down) */
+@media (max-width: 720px) {
+  main {
+    padding: 12px;
+    margin: 12px auto;
+  }
+  .container {
+    padding: 0 12px;
+  }
+  header, footer {
+    padding: 10px 16px;
+  }
+}
+
+/* Medium devices (desktops, 1024px and down) */
+@media (max-width: 1024px) {
+  .container {
+    max-width: 95%;
+  }
+}
+
+/* Large devices (large desktops, 1280px and up) */
+@media (min-width: 1280px) {
+  .container {
+    max-width: 1200px;
+  }
+}

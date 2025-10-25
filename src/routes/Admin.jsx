@@ -3,6 +3,7 @@ import './Admin.css';
 import { useAuth } from '../auth/AuthContext';
 import { supabase } from '../supabaseClient';
 import { uploadFile, getPublicUrl } from '../utils/storage';
+import { FaGamepad, FaUsers, FaComments, FaStar } from 'react-icons/fa';
 
 const genres = ["Action", "Adventure", "RPG", "Shooter", "Puzzle", "Sports", "Strategy"];
 
@@ -19,12 +20,53 @@ function Admin({ games, setGames }) {
   });
   const [filterGenre, setFilterGenre] = useState("");
   const [searchQuery, setSearchQuery] = useState("");
+  const [stats, setStats] = useState({
+    totalGames: 0,
+    totalUsers: 0,
+    totalComments: 0,
+    averageRating: 0
+  });
 
   const filteredGames = games.filter(
     (game) =>
       (filterGenre === "" || game.genre === filterGenre) &&
       game.name.toLowerCase().includes(searchQuery.toLowerCase())
   );
+  
+  useEffect(() => {
+    const fetchStats = async () => {
+      // Total games
+      setStats(prev => ({...prev, totalGames: games.length}));
+      
+      // Total users
+      const { count: userCount } = await supabase
+        .from('profiles')
+        .select('*', { count: 'exact', head: true });
+      
+      // Total comments
+      const { count: commentCount } = await supabase
+        .from('comments')
+        .select('*', { count: 'exact', head: true });
+      
+      // Average rating
+      const { data: ratings } = await supabase
+        .from('reviews')
+        .select('rating');
+      
+      const avgRating = ratings && ratings.length > 0
+        ? ratings.reduce((sum, item) => sum + item.rating, 0) / ratings.length
+        : 0;
+      
+      setStats({
+        totalGames: games.length,
+        totalUsers: userCount || 0,
+        totalComments: commentCount || 0,
+        averageRating: parseFloat(avgRating.toFixed(1))
+      });
+    };
+    
+    fetchStats();
+  }, [games]);
 
   const handleAddGame = async () => {
     if (!newGame.name) {
@@ -211,6 +253,37 @@ function Admin({ games, setGames }) {
     <div className="admin-panel">
       <h2>Admin Panel</h2>
       <button onClick={logout}>Logout</button>
+      
+      <div className="stats-dashboard">
+        <div className="stat-card">
+          <FaGamepad className="stat-icon" />
+          <div className="stat-info">
+            <h3>Total Juegos</h3>
+            <p>{stats.totalGames}</p>
+          </div>
+        </div>
+        <div className="stat-card">
+          <FaUsers className="stat-icon" />
+          <div className="stat-info">
+            <h3>Usuarios</h3>
+            <p>{stats.totalUsers}</p>
+          </div>
+        </div>
+        <div className="stat-card">
+          <FaComments className="stat-icon" />
+          <div className="stat-info">
+            <h3>Comentarios</h3>
+            <p>{stats.totalComments}</p>
+          </div>
+        </div>
+        <div className="stat-card">
+          <FaStar className="stat-icon" />
+          <div className="stat-info">
+            <h3>Rating Promedio</h3>
+            <p>{stats.averageRating}</p>
+          </div>
+        </div>
+      </div>
       <div>
         <input
           type="text"

@@ -3,7 +3,8 @@ import { useNavigate } from 'react-router-dom';
 import './GameCard.css';
 
 function GameCard({ game }) {
-  const thumb = game.image || (game.images && game.images[0]) || null;
+  const defaultPlaceholder = import.meta.env.VITE_DEFAULT_PLACEHOLDER_IMAGE || 'https://placehold.co/300x150/1a2a3a/ffffff/png?text=Game';
+  const thumb = game.image || (game.images && game.images[0]) || defaultPlaceholder;
   // thumbnail image
   // (we intentionally avoid link-button logic here; the card always opens details)
   const navigate = useNavigate();
